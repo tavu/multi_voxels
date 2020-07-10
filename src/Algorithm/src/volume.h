@@ -371,15 +371,6 @@ void generateTriangles(std::vector<float3>& triangles,  const Volume volume, sho
 
 void saveVoxelsToFile(const Volume volume,const kparams_t &params, std::string prefix);
 
-struct VolumeSlices
-{    
-    int3 pos;
-    sMatrix4 center;//position of the center relative to current camera pose
-
-    Volume sliceX;
-    Volume sliceY;
-    Volume sliceZ;
-};
 
 #include"volume_impl.h"
 

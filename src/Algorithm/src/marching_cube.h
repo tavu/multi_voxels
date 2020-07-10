@@ -1,8 +1,3 @@
-// #include <SLAMBenchUI.h>
-
-//using namespace std;
-
-#if 1
 int triTable[256][16] =
   {{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
    {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -370,9 +365,3 @@ float3 calcPtInterpolate(int edge, int x, int y, int z, const Volume &vol, short
    return make_float3(0.0f);
   }
 }
-
-
-
-
-
-#endif

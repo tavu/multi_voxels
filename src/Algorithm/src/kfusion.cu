@@ -83,7 +83,6 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     // render buffers
     renderModel.alloc(cs);
     //TODO better memory managment of covariance data
-    covData.alloc(cs);
     
     if (printCUDAError())
     {
@@ -116,7 +115,6 @@ KFusion::~KFusion()
         scaledDepth[i].release();
     }
     
-    covData.release();
     rawDepth.release();
     rawRgb.release();
     depthImage.release();
@@ -132,12 +130,6 @@ void KFusion::reset()
     dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
     initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
 }
-
-void KFusion::updateVolume()
-{
-    volume.updateData(newDataVol);
-}
-
 
 bool KFusion::preprocessing2(const float *inputDepth,const uchar3 *inputRgb)
 {
@@ -237,7 +229,7 @@ bool KFusion::raycasting(uint frame)
 {
     if (frame > 2)
     {
-        oldRaycastPose = raycastPose;
+//         oldRaycastPose = raycastPose;
         raycastPose = pose;
         dim3 grid=divup(make_uint2(params.computationSize.x,params.computationSize.y),raycastBlock );
         TICK("raycast");
@@ -268,13 +260,6 @@ void KFusion::integrateNewData(sMatrix4 p)
                                          inverse(p),camMatrix,params.mu,maxweight );
 
 }
-
-void KFusion::integrateSlices(VolumeSlices &slices)
-{
-
-}
-
-
 
 bool KFusion::integration(uint frame)
 {
@@ -333,24 +318,6 @@ bool KFusion::reIntegration(sMatrix4 p,const Host &depth,const Host &rgb)
     return true;
 }
 
-Image<float3, Host> KFusion::getAllVertex()
-{
-    Image<float3, Host> ret( make_uint2(params.inputSize.x, params.inputSize.y) );
-    cudaMemcpy(ret.data(), inputVertex[0].data(),
-            params.inputSize.x * params.inputSize.y * sizeof(float3),
-            cudaMemcpyDeviceToHost);
-    return ret;
-}
-
-Image<float3, Host> KFusion::getAllNormals()
-{
-    Image<float3, Host> ret( make_uint2(params.inputSize.x, params.inputSize.y) );
-    cudaMemcpy(ret.data(), inputNormal[0].data(),
-            params.inputSize.x * params.inputSize.y * sizeof(float3),
-            cudaMemcpyDeviceToHost);
-    return ret;
-}
-
 Image<TrackData, Host> KFusion::getTrackData()
 {
     Image<TrackData, Host> trackData;
@@ -382,50 +349,6 @@ void KFusion::getVertices(std::vector<float3> &vertices)
     free(hostData);
 }
 
-void KFusion::renderVolume(uchar3 * out)
-{
-    dim3 grid=divup(renderModel.size,imageBlock);
-
-    TICK("renderVolume");
-    renderVolumeKernel2<<<grid,imageBlock>>>( renderModel,vertex,normal,light,ambient,nearPlane,farPlane);
-    TOCK();
-    
-
-    cudaMemcpy(out, renderModel.data(),
-            params.computationSize.x * params.computationSize.y * sizeof(uchar3),
-            cudaMemcpyDeviceToHost);
-}
-
-Image<float, Host> KFusion::vertex2Depth()
-{
-    Image<float, Host> ret(params.inputSize);
-//    Image<float, Device> model(params.inputSize);
-    
-//     dim3 grid=divup(model.size,imageBlock);
-//    vertex2depthKernel<<<grid,imageBlock>>>( model,vertex,normal,nearPlane,farPlane,K);
-    
-//    cudaMemcpy(ret.data(), model.data(),
-//            params.inputSize.x * params.inputSize.y * sizeof(float),
-//            cudaMemcpyDeviceToHost);
-    return ret;
-}
-
-float KFusion::compareRgb( )
-{
-    Image<float, Device> diff( make_uint2(params.inputSize.x, params.inputSize.y) );
-    compareRgbKernel<<<divup(renderModel.size, imageBlock), imageBlock>>>( renderModel,rawRgb,diff);
-    
-    size_t size=params.inputSize.x*params.inputSize.y;
-    thrust::device_ptr<float> diff_ptr(diff.data());
-    thrust::device_vector<float> d_vec(diff_ptr,diff_ptr+size);
-    float sum = thrust::reduce(d_vec.begin(), d_vec.end(), 0, thrust::plus<float>());
-
-    float ret = sum/size;
-    
-    diff.release();
-    return ret;
-}
-
 void KFusion::getImageProjection(sMatrix4 p, uchar3 *out)
 {
     Image<float3, Device> vertexNew, normalNew;
@@ -452,37 +375,15 @@ void KFusion::getImageProjection(sMatrix4 p, uchar3 *out)
     normalNew.release();
 }
 
-float KFusion::getWrongNormalsSize()
-{
-
-    dim3 grid=divup(make_uint2(params.computationSize.x,params.computationSize.y),raycastBlock );
-
-    Image<int, Device> model;
-    model.alloc(params.inputSize);
-
-    wrongNormalsSizeKernel<<<grid, raycastBlock>>>( model,reduction );
-
-    size_t size=params.inputSize.x*params.inputSize.y;
-
-    thrust::device_ptr<int> diff_ptr(model.data());
-    thrust::device_vector<int> d_vec(diff_ptr,diff_ptr+size);
-    int sum = thrust::reduce(d_vec.begin(), d_vec.end(), 0, thrust::plus<int>());
-
-    float ret = (float)sum/(params.computationSize.x*params.computationSize.y);
-    
-    model.release();
-    return ret;
-}
-
 void KFusion::renderImage(uchar3 * out)
 {
-    TICK("renderVolume");
+    TICK("renderImage");
     cudaDeviceSynchronize();
     dim3 grid=divup(renderModel.size, imageBlock);
     renderRgbKernel<<<grid, imageBlock>>>(renderModel,volume,vertex,normal);
     TOCK();
 
-     cudaMemcpy(out, renderModel.data(),
+    cudaMemcpy(out, renderModel.data(),
                 params.computationSize.x * params.computationSize.y * sizeof(uchar3),
                 cudaMemcpyDeviceToHost);
 
@@ -579,130 +480,8 @@ bool KFusion::checkPoseKernel(sMatrix4 & pose,
     }
 
     _tracked=true;
-    poseInv=inverse(pose);
+    //poseInv=inverse(pose);
     return true;
 }
-
-void KFusion::getImageRaw(RgbHost &to) const
-{
-
-  uint s=(uint)rawRgb.size.x*rawRgb.size.y*sizeof(uchar3);
-  to.alloc(rawRgb.size);
-  cudaMemcpy(to.data(), rawRgb.data(),s,cudaMemcpyDeviceToHost);
-//  to.size=rawRgb.size;
-}
-
-void KFusion::getDepthRaw(DepthHost &to) const
-{
-    uint s=(uint)rawDepth.size.x*rawDepth.size.y*sizeof(float);
-    to.alloc(rawDepth.size);
-    cudaMemcpy(to.data(), rawDepth.data(),s,cudaMemcpyDeviceToHost);
-    to.size=rawDepth.size;
-}
-
-void KFusion::getIcpValues(Image<float3, Host> &depthVertex,
-                             Image<float3, Host> &raycastVertex,
-                             Image<float3, Host> &raycastNormals,
-                             Image<TrackData, Host> &trackData) const
-{
-    uint s=(uint) (params.volume_size.x*params.volume_size.y);
-    depthVertex.alloc(inputVertex[0].size);
-    raycastVertex.alloc(vertex.size);
-    raycastNormals.alloc(normal.size);
-    trackData.alloc(reduction.size);
-  
-    cudaMemcpy(depthVertex.data(), inputVertex[0].data(),s*sizeof(float3),cudaMemcpyDeviceToHost);
-    cudaMemcpy(raycastVertex.data(), vertex.data(),s*sizeof(float3),cudaMemcpyDeviceToHost);
-    cudaMemcpy(raycastNormals.data(), normal.data(),s*sizeof(float3),cudaMemcpyDeviceToHost);
-    cudaMemcpy(trackData.data(), reduction.data(),reduction.size.x*reduction.size.y*sizeof(TrackData),cudaMemcpyDeviceToHost);
-}
-
-float KFusion::getFitness()
-{
-    size_t size=reduction.size.x*reduction.size.y;
-    thrust::device_ptr<TrackData> ptr=thrust::device_pointer_cast(reduction.data());
-    TrackData d;
-    d.result=1;
-    int count = thrust::count(ptr,ptr+size,d);
-
-    float ret=(float)count/size;
-    return ret;
-}
-
-
-sMatrix6 KFusion::calculate_ICP_COV()
-{
-    sMatrix4 currPose=pose;
-    sMatrix4 invPrevPose=inverse(oldPose);
-    sMatrix4 delta=invPrevPose*currPose;
-
-    sMatrix4 projectedReference = camMatrix*inverse(sMatrix4(&raycastPose));
-    dim3 grid=divup(make_uint2(params.inputSize.x,params.inputSize.y),imageBlock );
-
-    sMatrix6 initMat;
-    for(int i=0;i<36;i++)
-        initMat.data[i]=0.0;
-
-
-
-    icpCovarianceFirstTerm<<<grid, imageBlock>>>(inputVertex[0],
-                                                vertex,
-                                                normal,
-                                                reduction,
-                                                covData,
-                                                trackPose,
-                                                projectedReference,
-                                                delta,
-                                                params.cov_big);
-    
-    cudaDeviceSynchronize();    
-    size_t size=covData.size.x*covData.size.y;
-    thrust::device_ptr<sMatrix6> cov_ptr(covData.data());
-    sMatrix6 d2J_dX2 = thrust::reduce(cov_ptr, cov_ptr+size, initMat, thrust::plus<sMatrix6>());
-
-    icpCovarianceSecondTerm<<<grid, imageBlock>>>(inputVertex[0],
-                                                  vertex,
-                                                  normal,
-                                                  reduction,
-                                                  covData,
-                                                  trackPose,
-                                                  projectedReference,
-                                                  delta,                                                  
-                                                  params.cov_z,
-                                                  params.cov_big);
-    cudaDeviceSynchronize();
-    sMatrix6 covSecondTerm = thrust::reduce(cov_ptr, cov_ptr+size, initMat, thrust::plus<sMatrix6>());
-
-
-    sMatrix6 d2J_dX2inv=inverse(d2J_dX2);
-    sMatrix6 tmp=d2J_dX2inv * covSecondTerm;
-    sMatrix6 icpCov= tmp * d2J_dX2inv;
-
-    //make sure that covariance matrix is symetric.
-    //small asymetries may occur due to numerical stability
-    sMatrix6 ret;
-    for(int i=0;i<6;i++)
-    {
-        for(int j=0;j<6;j++)
-        {
-            //eliminate NaN values
-            if(icpCov(i,j)!=icpCov(i,j))
-            {
-                icpCov(i,j)=params.cov_big;
-            }
-            if(icpCov(j,i)!=icpCov(j,i))
-            {
-                icpCov(j,i)=params.cov_big;
-            }
-            float val=( icpCov(i,j) + icpCov(j,i))/2;
-            ret(i,j)=val;
-            ret(j,i)=val;
-
-        }
-    }
-
-    return ret;
-}
-
 
 

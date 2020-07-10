@@ -8,35 +8,6 @@ struct sMatrix4
 {
     float4 data[4];
 
-//    __host__ __device__ sMatrix4(float a00,float a01,float a02,float a03,
-//                                 float a10,float a11,float a12,float a13,
-//                                 float a20,float a21,float a22,float a23,
-//                                 float a30,float a31,float a32,float a33)
-//    {
-//        data[0].x=a00;
-//        data[0].y=a01;
-//        data[0].z=a02;
-//        data[0].w=a03;
-
-//        data[1].x=a10;
-//        data[1].y=a11;
-//        data[1].z=a12;
-//        data[1].w=a13;
-
-//        data[2].x=a20;
-//        data[2].y=a21;
-//        data[2].z=a22;
-//        data[2].w=a23;
-
-
-//        data[3].x=a30;
-//        data[3].y=a31;
-//        data[3].z=a32;
-//        data[3].w=a33;
-
-//    }
-
-
     //Identity matrix
     __host__  __device__ sMatrix4()
     {

@@ -13,12 +13,12 @@ class KFusion
         //Allow a kfusion object to be created with a pose which include orientation as well as position
         KFusion(const kparams_t &par,sMatrix4 initPose);
 
-        void restorePose()
-        {
-            pose=oldPose;
-        }
+//         void restorePose()
+//         {
+//             pose=oldPose;
+//         }
 
-        void languageSpecificConstructor();
+//         void languageSpecificConstructor();
         ~KFusion();
 
         void reset();
@@ -31,10 +31,10 @@ class KFusion
         bool integration(uint frame);
 
         void getImageProjection(sMatrix4 pose, uchar3 *out);
-        float compareRgb();
-        float compareRgbTruth(sMatrix4 pose,uchar3 *out );
-        void dumpVolume(const  char * filename);
-        void renderVolume(uchar3 * out);
+//         float compareRgb();
+//         float compareRgbTruth(sMatrix4 pose,uchar3 *out );
+//         void dumpVolume(const  char * filename);
+//         void renderVolume(uchar3 * out);
         void renderImage(uchar3 * out);
 
         void renderTrack(uchar3 * out);
@@ -43,16 +43,16 @@ class KFusion
 
         void getVertices(std::vector<float3> &vertices);
 
-        float getFitness();
+//         float getFitness();
         sMatrix4 getPose() const
         {
             return pose;
         }
 
-        sMatrix4 getPoseInv() const
-        {
-            return poseInv;
-        }
+//         sMatrix4 getPoseInv() const
+//         {
+//             return poseInv;
+//         }
 
         void setPose(const sMatrix4 pose_)
         {
@@ -67,13 +67,14 @@ class KFusion
             else
                 viewPose = value;
         }
+        
         sMatrix4 *getViewPose()
         {
             return (viewPose);
         }
 
 
-        float calcNewMapInfo(uchar3 *out);
+//         float calcNewMapInfo(uchar3 *out);
 
         Volume& getVolume()
         {
@@ -88,26 +89,26 @@ class KFusion
         void integrateNewData(sMatrix4 p);
         bool deIntegration(sMatrix4 p,const Host &depth,const Host &rgb);
         bool reIntegration(sMatrix4 pose,const Host &depth,const Host &rgb);
-        void getImageRaw(RgbHost &to) const;
-        void getDepthRaw(DepthHost &data) const;
+//         void getImageRaw(RgbHost &to) const;
+//         void getDepthRaw(DepthHost &data) const;
         
         
-        void getIcpValues(Image<float3, Host> &depthVertex,
-                          Image<float3, Host> &raycastVertex,
-                          Image<float3, Host> &normals,
-                          Image<TrackData, Host> &trackData) const;
+//         void getIcpValues(Image<float3, Host> &depthVertex,
+//                           Image<float3, Host> &raycastVertex,
+//                           Image<float3, Host> &normals,
+//                           Image<TrackData, Host> &trackData) const;
 
-        sMatrix6 calculate_ICP_COV();
+//         sMatrix6 calculate_ICP_COV();
         
-        Image<float3, Host> getAllVertex();
-        Image<float3, Host> getAllNormals();
+//         Image<float3, Host> getAllVertex();
+//         Image<float3, Host> getAllNormals();
 
         Image<TrackData, Host> getTrackData();
-        float getWrongNormalsSize();
+//         float getWrongNormalsSize();
         
-        Image<float, Host> vertex2Depth();
-        void updateVolume();
-        void integrateSlices(VolumeSlices &slices);
+//         Image<float, Host> vertex2Depth();
+//         void updateVolume();
+//         void integrateSlices(VolumeSlices &slices);
 
 
     private:
@@ -115,11 +116,11 @@ class KFusion
         bool forcePose;
         float step;
         sMatrix4 pose;
-        sMatrix4 poseInv;
+//         sMatrix4 poseInv;
         sMatrix4 oldPose;
         sMatrix4 deltaPose;
         sMatrix4 trackPose;
-        sMatrix4 oldRaycastPose;
+//         sMatrix4 oldRaycastPose;
         sMatrix4 *viewPose;
         sMatrix4 inverseCam;
         sMatrix4 camMatrix;
@@ -136,12 +137,14 @@ class KFusion
         Image<float3, Device> vertex, normal;
         std::vector<Image<float3, Device> > inputVertex, inputNormal;
         std::vector<Image<float, Device> > scaledDepth;
-        
-        Image<sMatrix6, Device> covData;
-
+//         
+//         Image<sMatrix6, Device> covData;
+// 
         Image<float, Device> rawDepth;
-        Image<ushort, Device> depthImage;
         Image<uchar3, Device> rawRgb;
+        
+        Image<ushort, Device> depthImage;
+
         Image<float, HostDevice> output;
         Image<float, Device> gaussian;
 
