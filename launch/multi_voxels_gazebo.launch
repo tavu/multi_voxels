@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>    
+    
+    <node name="multi_voxels" pkg="multi_voxels" type="multi_voxels_node" output="screen">
+        <rosparam file="$(find multi_voxels)/config/kfusion_params.yaml" command="load"/> 
+        
+        <param name="depth_topic" type="string" value="/depth0/image_raw" />
+        <param name="rgb_topic" type="str" value="/camera/rgb/image_raw" />
+        <param name="cam_info_topic" type="str" value="/camera/depth/camera_info" />
+        
+
+        <param name="publish_volume" type="bool" value="true" />
+        <param name="publish_points" type="bool" value="false" />
+        <param name="publish_points_rate" type="int" value="20" />
+    </node>    
+</launch>
