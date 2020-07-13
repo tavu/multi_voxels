@@ -47,6 +47,12 @@ class Volume
             return voxelSize;
         }
 
+        __host__ __device__ float3 getSizeInMeters() const
+        {
+            return make_float3(voxelSize.x*_resolution.x,
+                               voxelSize.y*_resolution.y,
+                               voxelSize.z*_resolution.z);
+        }
 
         __host__ __device__ int3 getOffset() const
         {

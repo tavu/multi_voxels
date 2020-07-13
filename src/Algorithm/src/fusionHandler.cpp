@@ -64,14 +64,14 @@ bool FusionHandler::processFrame()
         
         if(_fusion->keyFramesNum()==MAX_KEY_FRAMES)
         {
-//             Volume vol=_fusion->getVolume();
+            Volume vol=_fusion->getVolume();
             char buf[64];
-//             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
-//             saveVoxelsToFile(buf,vol);
+            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
+            saveVoxelsToFile(buf,vol);
         
             _fusion->fuseVolumes();
             
-            Volume vol=_fusion->getVolume();            
+            vol=_fusion->getVolume();            
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
             saveVoxelsToFile(buf,vol);
         }

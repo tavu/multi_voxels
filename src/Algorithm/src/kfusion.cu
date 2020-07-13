@@ -273,7 +273,7 @@ bool KFusion::fuseVolumes()
         keyFrameVol.initDataFromCpu(v);
         saveVoxelsToFile(filename,keyFrameVol);
         
-        fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,v.pose,maxweight);
+        fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,inverse(v.pose),maxweight);
     }
     return true;
 }
@@ -324,8 +324,8 @@ bool KFusion::raycasting(uint frame)
 
 void KFusion::integrateKeyFrameData()
 {
-//     sMatrix4 delta=inverse(lastKeyFramePose)*pose;
-    sMatrix4 delta=pose;
+    sMatrix4 delta=inverse(lastKeyFramePose)*pose;
+//    sMatrix4 delta=pose;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
 
     integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,

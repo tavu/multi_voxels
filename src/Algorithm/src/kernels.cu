@@ -152,12 +152,22 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
         return;
     }
     
+    float3 vsize=srcVol.getSizeInMeters();    
+    
+    
+    
     for (pix.z = 0; pix.z < dstVol.getResolution().z; pix.z++)
     {   
         float3 pos=dstVol.pos(pix);
-       
-        if (pos.z < 0.0001f) // some near plane constraint
+        
+        pos=pose*pos;
+        
+        if( pos.x<0 || pos.x >= vsize.x ||
+            pos.y<0 || pos.x >= vsize.y ||
+            pos.z<0 || pos.x >= vsize.z)
+        {
             continue;
+        }
         
         float tsdf=srcVol.interp(pos);
         if(tsdf==1.0)
@@ -174,17 +184,11 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
         fcol.x = (w*p_color.x + fcol.x ) / new_w;
         fcol.y = (w*p_color.y + fcol.y ) / new_w;
         fcol.z = (w*p_color.z + fcol.z ) / new_w;
-
-            /*
-            frgb.x=clamp(frgb.x,MIN_L,MAX_L);
-            frgb.y=clamp(frgb.y,MIN_A,MAX_A);
-            frgb.z=clamp(frgb.z,MIN_B,MAX_B);
-            */
             
         p_data.x = clamp( (w*p_data.x + tsdf) / new_w, -1.f, 1.f);
         p_data.y=p_data.y+1;
         
-        printf("TSDF:%f %f\n",tsdf,p_data.x);
+        //printf("TSDF:%f %f\n",tsdf,p_data.x);
         
         dstVol.set(pix,p_data, fcol);
         
