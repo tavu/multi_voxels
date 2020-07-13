@@ -5,14 +5,16 @@
 #include"defs.h"
 #include"constant_parameters.h"
 #include <unistd.h>
-// #include"kernelscalls.h"
+#include"volume.h"
 
 
 FusionHandler::FusionHandler(const kparams_t &p,sMatrix4 initPose)
     :params(p),
      _frame(-1) 
 {
-    _fusion = new KFusion(params,initPose);    
+    _fusion = new KFusion(params,initPose);
+     
+    _fusion->initKeyFrame(0);
 }
 
 
@@ -45,6 +47,10 @@ bool FusionHandler::processFrame()
     {
         std::cerr<<"[FRAME="<<_frame<<"] Integration faild!"<<std::endl;        
     }
+    else
+    {
+        _fusion->integrateKeyFrameData();
+    }
 
     bool raycast=_fusion->raycasting(_frame);
     if(!raycast)
@@ -52,6 +58,21 @@ bool FusionHandler::processFrame()
         std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
     }
 
+    if(_frame>0 && (_frame % KEY_FRAME_THR)==0)
+    {
+        
+#ifdef SAVE_VOXELS_TO_FILE
+        if(_frame>0)
+        {
+            Volume vol=_fusion->getKeyFrameVolume();
+            char buf[64];
+            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
+            saveVoxelsToFile(buf,vol);
+        }
+#endif
+        _fusion->initKeyFrame(_frame);
+    }
+    
     return tracked;
 }
 

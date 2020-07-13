@@ -47,5 +47,63 @@ void generateTriangles(std::vector<float3>& triangles,  const Volume volume, sho
     }
 }
 
+// void saveVoxelsToFile(char *fileName,const Volume volume,const kparams_t &params)
+void saveVoxelsToFile(char *fileName,const Volume volume)
+{
+    //TODO this function needs cleanup and speedup
+    std::cout<<"Saving TSDF voxel grid values to disk("<<fileName<<")"<< std::endl;
 
+    std::ofstream outFile(fileName, std::ios::out);
+    float dimensions[3];
+    dimensions[0]=float(volume.getResolution().x);
+    dimensions[1]=float(volume.getResolution().y);
+    dimensions[2]=float(volume.getResolution().z);
+
+    outFile<<dimensions[0]<<std::endl;
+    outFile<<dimensions[1]<<std::endl;
+    outFile<<dimensions[2]<<std::endl;
+
+    float origin[3];
+    origin[0]=0.0;
+    origin[1]=0.0;
+    origin[2]=0.0;
+
+    outFile<<origin[0]<<std::endl;
+    outFile<<origin[1]<<std::endl;
+    outFile<<origin[2]<<std::endl;
+
+    //assuming cubical voxels
+    float vox_size=volume.getVoxelSize().x;
+    //float vox_size=float(params.volume_size.x)/float(params.volume_resolution.x);
+    outFile<<vox_size<<std::endl;
+    //outFile<<params.mu<<std::endl;
+
+    short2 *voxel_grid_cpu=new short2[volume.getResolution().x*volume.getResolution().y*volume.getResolution().z];
+
+    cudaMemcpy(voxel_grid_cpu, volume.getDataPtr(),
+                   volume.getResolution().x*volume.getResolution().y*volume.getResolution().z* sizeof(short2),
+                   cudaMemcpyDeviceToHost);
+
+    //for(int i=0;i<params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z;i++)
+
+    uint3 pos;
+    for(pos.x=0;pos.x<volume.getResolution().x;pos.x++)
+    {
+        for(pos.y=0;pos.y<volume.getResolution().y;pos.y++)
+        {
+            for(pos.z=0;pos.z<volume.getResolution().z;pos.z++)
+            {
+                uint arrayPos=volume.getIdx(pos);
+                short2 data=voxel_grid_cpu[arrayPos];
+                float value=float(data.x)/32766.0f;
+                outFile<<value<<'\n';
+            }
+        }
+    }
+
+    outFile.close();
+
+    std::cout<<"Saving done."<<std::endl;
+    delete [] voxel_grid_cpu;
+}
 

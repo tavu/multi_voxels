@@ -26,7 +26,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
                             params.volume_size.z);
 
     volume.init(vr,vd);
-    newDataVol.init(vr,vd);
+    keyFrameVol.init(vr,vd);
 
     pose = initPose;
     oldPose=pose;
@@ -76,13 +76,9 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
     TOCK();
     printCUDAError();
-
-    //init new data volume
-    initVolumeKernel<<<grid, imageBlock>>>(newDataVol, make_float2(1.0f, 0.0f));
     
     // render buffers
-    renderModel.alloc(cs);
-    //TODO better memory managment of covariance data
+    renderModel.alloc(cs);    
     
     if (printCUDAError())
     {
@@ -225,6 +221,17 @@ bool KFusion::tracking(uint frame)
     return checkPoseKernel(pose, oldPose, output.data(), params.computationSize,track_threshold);
 }
 
+bool KFusion::initKeyFrame(uint frame)
+{
+    lastKeyFramePose=getPose();
+    
+    dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
+    //init new data volume
+    initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
+    
+    return true;
+}
+
 bool KFusion::raycasting(uint frame)
 {
     if (frame > 2)
@@ -250,13 +257,14 @@ bool KFusion::raycasting(uint frame)
     return true;
 }
 
-void KFusion::integrateNewData(sMatrix4 p)
+void KFusion::integrateKeyFrameData()
 {
-    dim3 grid=divup(dim3(newDataVol.getResolution().x, newDataVol.getResolution().y), imageBlock);
-    //initVolumeKernel<<<grid, imageBlock>>>(newDataVol, make_float2(1.0f, 0.0f));
+    sMatrix4 p=pose;
+    dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
+    //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
 
 
-    integrateKernel<<<grid,imageBlock>>>(newDataVol,rawDepth,rawRgb,
+    integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,
                                          inverse(p),camMatrix,params.mu,maxweight );
 
 }

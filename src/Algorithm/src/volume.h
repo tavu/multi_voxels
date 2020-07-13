@@ -88,15 +88,16 @@ class Volume
             return dim;
         }
 
-        __host__ __device__ __forceinline__ uint getPos(const uint3 &pos) const
+        __host__ __device__ __forceinline__ uint getIdx(const uint3 &pos) const
         {
             return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
         }
 
-        __device__ size_t getPos(const int3 &p) const
+        __host__ __device__ __forceinline__ uint getIdx(const int3 &pos) const
         {
-            int3 pos;
+            return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;            
             /*
+            int3 pos;
             if(p.x<minVoxel().x)
             {
                 printf("Min x error:%d, %d\n",p.x,minVoxel().x);
@@ -144,17 +145,18 @@ class Volume
                 pos.z=_resolution.x-(-p.z%(_resolution.z-1));
             else
                 pos.z=p.z%(_resolution.z-1);
-            */
+            
             pos.x=p.x%(_resolution.x);
             pos.y=p.y%(_resolution.y);
             pos.z=p.z%(_resolution.z);
             return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
+            */
         }
 
         __device__
         float2 operator[](const int3 & pos) const
         {
-            const short2 d = data[getPos(pos)];
+            const short2 d = data[getIdx(pos)];
             return make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
         }
 
@@ -169,7 +171,7 @@ class Volume
         __device__
         float3 getColor(const int3 & pos) const
         {
-            return color[getPos(pos)];
+            return color[getIdx(pos)];
         }
 
         __device__
@@ -182,32 +184,32 @@ class Volume
         __device__
         float vs(const int3 & pos) const
         {
-            return data[getPos(pos)].x;
+            return data[getIdx(pos)].x;
         }
 
         __device__
         float red(const int3 & pos) const
         {
-            return color[getPos(pos)].x;
+            return color[getIdx(pos)].x;
         }
 
         __device__
         float green(const int3 & pos) const
         {
-            return color[getPos(pos)].y;
+            return color[getIdx(pos)].y;
         }
 
         __device__
         float blue(const int3 & pos) const
         {
             //return color[pos.x + pos.y * _size.x + pos.z * _size.x * _size.y].z;
-            return color[getPos(pos)].z;
+            return color[getIdx(pos)].z;
         }
 
         __device__
         void set(const int3 & pos, const float2 & d)
         {
-            size_t idx=getPos(pos);
+            size_t idx=getIdx(pos);
             data[idx] = make_short2(d.x * 32766.0f, d.y);
             color[idx] = make_float3(0.0,0.0,0.0);
         }
@@ -223,7 +225,7 @@ class Volume
         __device__
         void set(const int3 & pos, const float2 &d,const float3 &c)
         {
-            size_t p=getPos(pos);
+            size_t p=getIdx(pos);
             data[p] = make_short2(d.x * 32766.0f, d.y);
             color[p] = c;
         }
@@ -366,10 +368,8 @@ class Volume
 };
 
 //Usefull functions
-// void dumpVolume(const char *  filename,const Volume volume);
 void generateTriangles(std::vector<float3>& triangles,  const Volume volume, short2 *hostData);
-
-void saveVoxelsToFile(const Volume volume,const kparams_t &params, std::string prefix);
+void saveVoxelsToFile(char *fileName,const Volume volume);
 
 
 #include"volume_impl.h"
