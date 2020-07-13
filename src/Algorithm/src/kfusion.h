@@ -74,6 +74,7 @@ class KFusion
 
         bool initKeyFrame(uint frame);
 
+        void saveVolumes(char *dir);
     private:
         bool _tracked;
         bool forcePose;
@@ -85,6 +86,7 @@ class KFusion
         sMatrix4 trackPose;
 
         sMatrix4 lastKeyFramePose;
+        uint lastKeyFrameIdx;
         
         sMatrix4 *viewPose;
         sMatrix4 inverseCam;
@@ -113,7 +115,9 @@ class KFusion
 
         Image<uchar3, Device> renderModel;
 
+        std::vector<VolumeCpu> volumes;
 
+        
         //Functions
         bool updatePoseKernel(sMatrix4 & pose, const float * output,float icp_threshold,sMatrix4 &deltaPose);
         bool checkPoseKernel(sMatrix4 & pose,

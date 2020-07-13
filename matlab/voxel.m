@@ -1,6 +1,6 @@
 clear;
 
-frame1=1170;
+frame1=1080;
 
 dir='/tmp/voxels';
 voxelFile = sprintf('%s/f%d_voxels',dir,frame1);

@@ -13,7 +13,6 @@ FusionHandler::FusionHandler(const kparams_t &p,sMatrix4 initPose)
      _frame(-1) 
 {
     _fusion = new KFusion(params,initPose);
-     
     _fusion->initKeyFrame(0);
 }
 
@@ -62,15 +61,17 @@ bool FusionHandler::processFrame()
     {
         
 #ifdef SAVE_VOXELS_TO_FILE
-        if(_frame>0)
-        {
-            Volume vol=_fusion->getKeyFrameVolume();
-            char buf[64];
-            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
-            saveVoxelsToFile(buf,vol);
-        }
+        Volume vol=_fusion->getKeyFrameVolume();
+        char buf[64];
+        sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
+        saveVoxelsToFile(buf,vol);
 #endif
         _fusion->initKeyFrame(_frame);
+    }
+    
+    if(_frame==SAVE_VOLUMS_FRAME)
+    {
+        _fusion->saveVolumes((char*)"/tmp/voxels");
     }
     
     return tracked;

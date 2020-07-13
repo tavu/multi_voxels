@@ -223,16 +223,55 @@ bool KFusion::tracking(uint frame)
 
 bool KFusion::initKeyFrame(uint frame)
 {
+    if(frame>0)
+    {
+        VolumeCpu v;
+        v.frame=lastKeyFrameIdx;
+        v.pose=lastKeyFramePose;
+        v.resolution=keyFrameVol.getResolution();
+        v.dimensions=keyFrameVol.getDimensions();
+        
+        uint size=v.resolution.x*v.resolution.y*v.resolution.z;
+        
+        v.data=new short2[size];
+        cudaMemcpy(v.data, keyFrameVol.getDataPtr(),size*sizeof(short2),cudaMemcpyDeviceToHost);
+        
+        v.color=new float3[size];
+        cudaMemcpy(v.color, keyFrameVol.getColorPtr(),size*sizeof(float3),cudaMemcpyDeviceToHost);
+
+        volumes.push_back(v);
+    }
+    
+    lastKeyFrameIdx=frame;
     lastKeyFramePose=getPose();
     lastKeyFramePose(0,3)-=params.volume_direction.x;
     lastKeyFramePose(1,3)-=params.volume_direction.y;
     lastKeyFramePose(2,3)-=params.volume_direction.z;
-    
+            
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
-    //init new data volume
     initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
     
     return true;
+}
+
+void KFusion::saveVolumes(char *dir)
+{
+    char filename[512];
+    
+    Volume volTmp;    
+    
+    volTmp.init(params.volume_resolution,params.volume_size);
+    
+    for(int i=0;i<volumes.size();i++)
+    {
+        VolumeCpu &v=volumes[i];
+        volTmp.initDataFromCpu(v);
+        
+        sprintf(filename,"%s/f%d_voxels",dir,v.frame);
+        
+        saveVoxelsToFile(filename,volTmp);
+    }
+    volTmp.release();
 }
 
 bool KFusion::raycasting(uint frame)
@@ -262,7 +301,7 @@ bool KFusion::raycasting(uint frame)
 
 void KFusion::integrateKeyFrameData()
 {
-    std::cout<<lastKeyFramePose<<std::endl;
+//     std::cout<<lastKeyFramePose<<std::endl;
     sMatrix4 delta=inverse(lastKeyFramePose)*pose;
     //sMatrix4 delta=pose;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);

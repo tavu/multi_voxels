@@ -6,7 +6,17 @@
 #include"kparams.h"
 #include<iostream>
 #include"sMatrix.h"
-//#define IDX(a,b,c) a + b * _size.x + c * _size.x * _size.y
+
+struct VolumeCpu
+{
+    uint frame;
+    sMatrix4 pose;
+    uint3 resolution;
+    float3 dimensions;
+
+    short2 *data;
+    float3 *color;
+};
 
 class Volume
 {
@@ -82,6 +92,11 @@ class Volume
         {
             return data;
         }
+        
+        __host__ __device__ float3*  getColorPtr() const
+        {
+            return color;
+        }
 
         __host__ __device__ float3 getDimensions() const
         {
@@ -95,62 +110,7 @@ class Volume
 
         __host__ __device__ __forceinline__ uint getIdx(const int3 &pos) const
         {
-            return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;            
-            /*
-            int3 pos;
-            if(p.x<minVoxel().x)
-            {
-                printf("Min x error:%d, %d\n",p.x,minVoxel().x);
-                assert(0);
-            }
-            if(p.x>=maxVoxel().x)
-            {
-                printf("Max x error:%d, %d\n",p.x,maxVoxel().x);
-                assert(0);
-            }
-
-            if(p.y<minVoxel().y)
-            {
-                printf("Min y error:%d, %d\n",p.y,minVoxel().y);
-                assert(0);
-            }
-            if(p.y>=maxVoxel().y)
-            {
-                printf("Max y error:%d, %d\n",p.y,maxVoxel().y);
-                assert(0);
-            }
-
-            if(p.z<minVoxel().z)
-            {
-                printf("Min z error:%d, %d\n",p.z,minVoxel().z);
-                assert(0);
-            }
-            if(p.z>=maxVoxel().z)
-            {
-                printf("Max z error:%d, %d\n",p.z,maxVoxel().z);
-                assert(0);
-            }
-
-            if(p.x<0)
-                pos.x=_resolution.x-(-p.x%(_resolution.x-1) );
-            else
-                pos.x=p.x%(_resolution.x-1);
-
-            if(p.y<0)
-                pos.y=_resolution.x-(-p.y%(_resolution.y-1));
-            else
-                pos.y=p.y%(_resolution.y-1);
-
-            if(p.z<0)
-                pos.z=_resolution.x-(-p.z%(_resolution.z-1));
-            else
-                pos.z=p.z%(_resolution.z-1);
-            
-            pos.x=p.x%(_resolution.x);
-            pos.y=p.y%(_resolution.y);
-            pos.z=p.z%(_resolution.z);
             return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
-            */
         }
 
         __device__
@@ -255,31 +215,6 @@ class Volume
                                 ( (p.z + 0.5f) * voxelSize.z));
         }
 
-
-        __device__
-        float3 pos2(const int3 & p) const
-        {
-            int3 pos;
-            if(p.x<0)
-                pos.x=_resolution.x+p.x%(_resolution.x-1);
-            else
-                pos.x=p.x%(_resolution.x-1);
-
-            if(p.y<0)
-                pos.y=_resolution.x+p.y%(_resolution.y-1);
-            else
-                pos.y=p.y%(_resolution.y-1);
-
-            if(p.z<0)
-                pos.z=_resolution.x+p.z%(_resolution.z-1);
-            else
-                pos.z=p.z%(_resolution.z-1);
-
-            return make_float3( ( (pos.x + 0.5f) * voxelSize.x),
-                                ( (pos.y + 0.5f) * voxelSize.y),
-                                ( (pos.z + 0.5f) * voxelSize.z));
-        }
-
         __device__
         float interp(const float3 & pos) const
         {
@@ -316,19 +251,43 @@ class Volume
             cudaMemcpy(color,other.color,s*sizeof(float3),cudaMemcpyDeviceToDevice);
         }
 
-        void init(uint3 s, float3 d)
+        void init(uint3 resolution, float3 dimensions)
         {
-            _resolution = s;
-            dim = d;
-            cudaMalloc((void**)&data,_resolution.x * _resolution.y * _resolution.z * sizeof(short2));
-            cudaMalloc(&color,_resolution.x * _resolution.y * _resolution.z * sizeof(float3));
-            cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
-            cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
+            _resolution = resolution;
+            dim = dimensions;
+            
+            uint size=_resolution.x * _resolution.y * _resolution.z;
+            
+            cudaMalloc((void**)&data, size*sizeof(short2));
+            cudaMalloc((void**)&color, size*sizeof(float3));
+            
+//             cudaMalloc((void**)&data,_resolution.x * _resolution.y * _resolution.z * sizeof(short2));
+//             cudaMalloc(&color,_resolution.x * _resolution.y * _resolution.z * sizeof(float3));
+             cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
+             cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
 
             voxelSize=dim/_resolution;
 
             _offset=make_int3(0,0,0);
         }
+        
+        void initDataFromCpu(VolumeCpu volCpu)
+        {
+//             _resolution = volCpu.resolution;
+//             dim = volCpu.dimensions;
+            
+            uint size=_resolution.x * _resolution.y * _resolution.z;
+            
+//             cudaMalloc((void**)&data, size*sizeof(short2));
+//             cudaMalloc((void**)&color, size*sizeof(float3));
+                        
+            cudaMemcpy(data, volCpu.data,size*sizeof(short2),cudaMemcpyHostToDevice);        
+            cudaMemcpy(color, volCpu.color,size*sizeof(float3),cudaMemcpyHostToDevice);
+
+//             voxelSize=dim/_resolution;
+//             _offset=make_int3(0,0,0);
+        }
+        
 
         __host__ __device__ int3 minVoxel() const
         {

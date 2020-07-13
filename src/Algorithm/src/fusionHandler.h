@@ -38,6 +38,7 @@ class FusionHandler
 
 
     private:
+//         
         KFusion *_fusion;
 
         const kparams_t &params;
