@@ -268,7 +268,21 @@ bool KFusion::fuseVolumes()
         keyFrameVol.initDataFromCpu(v);
         fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,inverse(v.pose),maxweight);
     }
+    initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
+    
     return true;
+}
+
+void KFusion::clearKeyFramesData()
+{
+    for(int i=0;i<volumes.size();i++)
+    {
+        VolumeCpu &v=volumes[i];
+        
+        delete v.data;
+        delete v.color;
+    }
+    volumes.clear();
 }
 
 void KFusion::saveVolumes(char *dir)
@@ -396,7 +410,6 @@ Image<TrackData, Host> KFusion::getTrackData()
 
     return trackData;
 }
-
 
 void KFusion::getVertices(std::vector<float3> &vertices)
 {

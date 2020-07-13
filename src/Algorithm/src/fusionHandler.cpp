@@ -64,9 +64,10 @@ bool FusionHandler::processFrame()
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
             saveVoxelsToFile(buf,vol);
 #endif        
-            _fusion->fuseVolumes();
-
-            #ifdef SAVE_VOXELS_TO_FILE            
+            
+            _fusion->fuseVolumes();            
+            
+#ifdef SAVE_VOXELS_TO_FILE            
             vol=_fusion->getVolume();            
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
             saveVoxelsToFile(buf,vol);
@@ -75,6 +76,7 @@ bool FusionHandler::processFrame()
 #ifdef SAVE_VOLUMES_FRAME    
             _fusion->saveVolumes((char*)"/tmp/voxels");
 #endif   
+            _fusion->clearKeyFramesData();
         }
     }
 

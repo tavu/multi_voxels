@@ -82,6 +82,8 @@ class KFusion
             return volumes.size();
         }
         
+        void clearKeyFramesData();
+        
     private:
         bool _tracked;
         bool forcePose;
