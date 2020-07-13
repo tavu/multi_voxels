@@ -51,12 +51,6 @@ bool FusionHandler::processFrame()
         _fusion->integrateKeyFrameData();
     }
 
-    bool raycast=_fusion->raycasting(_frame);
-    if(!raycast)
-    {
-        std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
-    }
-
     if(_frame>0 && (_frame % KEY_FRAME_THR)==0)
     {
         
@@ -67,13 +61,35 @@ bool FusionHandler::processFrame()
         saveVoxelsToFile(buf,vol);
 #endif
         _fusion->initKeyFrame(_frame);
+        
+        if(_fusion->keyFramesNum()==MAX_KEY_FRAMES)
+        {
+//             Volume vol=_fusion->getVolume();
+            char buf[64];
+//             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
+//             saveVoxelsToFile(buf,vol);
+        
+            _fusion->fuseVolumes();
+            
+            Volume vol=_fusion->getVolume();            
+            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
+            saveVoxelsToFile(buf,vol);
+        }
     }
     
+#ifdef SAVE_VOLUMS_FRAME    
     if(_frame==SAVE_VOLUMS_FRAME)
     {
         _fusion->saveVolumes((char*)"/tmp/voxels");
     }
-    
+#endif
+
+    bool raycast=_fusion->raycasting(_frame);
+    if(!raycast)
+    {
+        std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
+    }
+
     return tracked;
 }
 

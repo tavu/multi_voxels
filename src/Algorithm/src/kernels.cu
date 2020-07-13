@@ -142,6 +142,55 @@ __global__ void raycastKernel(Image<float3> pos3D,
     }
 }
 
+__global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 pose,const float maxweight)
+{
+    uint3 pix = make_uint3(thr2pos2());
+    
+    if( pix.x >= dstVol.getResolution().x ||
+        pix.y >= dstVol.getResolution().y )
+    {
+        return;
+    }
+    
+    for (pix.z = 0; pix.z < dstVol.getResolution().z; pix.z++)
+    {   
+        float3 pos=dstVol.pos(pix);
+       
+        if (pos.z < 0.0001f) // some near plane constraint
+            continue;
+        
+        float tsdf=srcVol.interp(pos);
+        if(tsdf==1.0)
+            continue;
+                
+        float3 fcol=srcVol.rgb_interp(pos);
+        
+        float2 p_data = dstVol[pix];
+        float3 p_color = dstVol.getColor(pix);
+        
+        float w=fmin(p_data.y,maxweight);
+        float new_w=w+1;
+                
+        fcol.x = (w*p_color.x + fcol.x ) / new_w;
+        fcol.y = (w*p_color.y + fcol.y ) / new_w;
+        fcol.z = (w*p_color.z + fcol.z ) / new_w;
+
+            /*
+            frgb.x=clamp(frgb.x,MIN_L,MAX_L);
+            frgb.y=clamp(frgb.y,MIN_A,MAX_A);
+            frgb.z=clamp(frgb.z,MIN_B,MAX_B);
+            */
+            
+        p_data.x = clamp( (w*p_data.x + tsdf) / new_w, -1.f, 1.f);
+        p_data.y=p_data.y+1;
+        
+        printf("TSDF:%f %f\n",tsdf,p_data.x);
+        
+        dstVol.set(pix,p_data, fcol);
+        
+    }
+}
+
 
 __global__ void integrateKernel(Volume vol, const Image<float> depth,
                                 const Image<uchar3> rgb,

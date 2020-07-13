@@ -75,6 +75,13 @@ class KFusion
         bool initKeyFrame(uint frame);
 
         void saveVolumes(char *dir);
+        bool fuseVolumes();
+        
+        uint keyFramesNum() const
+        {
+            return volumes.size();
+        }
+        
     private:
         bool _tracked;
         bool forcePose;

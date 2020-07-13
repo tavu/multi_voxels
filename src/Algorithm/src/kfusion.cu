@@ -254,12 +254,35 @@ bool KFusion::initKeyFrame(uint frame)
     return true;
 }
 
+bool KFusion::fuseVolumes()
+{        
+    dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
+        
+    //clear volume first    
+    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));    
+    printCUDAError();
+    
+    char filename[512];
+    
+    for(int i=0;i<volumes.size();i++)
+    {        
+        VolumeCpu &v=volumes[i];        
+        sprintf(filename,"/tmp/voxels/f%d_voxels",v.frame);
+        std::cout<<"FUSE:"<<v.frame<<std::endl;
+        
+        keyFrameVol.initDataFromCpu(v);
+        saveVoxelsToFile(filename,keyFrameVol);
+        
+        fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,v.pose,maxweight);
+    }
+    return true;
+}
+
 void KFusion::saveVolumes(char *dir)
 {
     char filename[512];
     
-    Volume volTmp;    
-    
+    Volume volTmp;        
     volTmp.init(params.volume_resolution,params.volume_size);
     
     for(int i=0;i<volumes.size();i++)
@@ -301,12 +324,9 @@ bool KFusion::raycasting(uint frame)
 
 void KFusion::integrateKeyFrameData()
 {
-//     std::cout<<lastKeyFramePose<<std::endl;
-    sMatrix4 delta=inverse(lastKeyFramePose)*pose;
-    //sMatrix4 delta=pose;
+//     sMatrix4 delta=inverse(lastKeyFramePose)*pose;
+    sMatrix4 delta=pose;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
-    //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
-
 
     integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,
                                          inverse(delta),camMatrix,params.mu,maxweight );

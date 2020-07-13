@@ -17,9 +17,10 @@ function tsdf2mesh(file, outfile)
     faces = fv.faces';
     color = uint8(repmat([175;198;233],1,size(points,2)));
 
-    meshPoints(1,:) = voxelGridOrigin(1) + points(2,:)*voxelSize;
+    size(points)    
     
     % x y axes are swapped from isosurface
+    meshPoints(1,:) = voxelGridOrigin(1) + points(2,:)*voxelSize;
     meshPoints(2,:) = voxelGridOrigin(2) + points(1,:)*voxelSize;
     meshPoints(3,:) = voxelGridOrigin(3) + points(3,:)*voxelSize;
     

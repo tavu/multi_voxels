@@ -12,6 +12,7 @@ __global__ void integrate(Volume vol,
                           const float mu,
                           const float maxweight);
 
+__global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 pose,const float maxweight);
 
 __global__ void depth2vertex(Image<float3> vertex,
                              const Image<float> depth,
