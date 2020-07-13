@@ -244,9 +244,9 @@ bool KFusion::initKeyFrame(uint frame)
     
     lastKeyFrameIdx=frame;
     lastKeyFramePose=getPose();
-    lastKeyFramePose(0,3)-=params.volume_direction.x;
-    lastKeyFramePose(1,3)-=params.volume_direction.y;
-    lastKeyFramePose(2,3)-=params.volume_direction.z;
+//     lastKeyFramePose(0,3)-=params.volume_direction.x;
+//     lastKeyFramePose(1,3)-=params.volume_direction.y;
+//     lastKeyFramePose(2,3)-=params.volume_direction.z;
             
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
     initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
@@ -328,6 +328,12 @@ void KFusion::integrateKeyFrameData()
 {
     sMatrix4 delta=inverse(lastKeyFramePose)*pose;
 //     sMatrix4 delta=pose;
+    
+    delta(0,3)+=params.volume_direction.x;
+    delta(1,3)+=params.volume_direction.y;
+    delta(2,3)+=params.volume_direction.z;
+    
+    std::cout<<delta<<std::endl;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
 
     integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,

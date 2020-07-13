@@ -162,6 +162,10 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
         
         pos=pose*pos;
         
+        pos.x+=4;
+        pos.y+=4;
+        pos.z+=4;
+        
         if( pos.x<0 || pos.x >= vsize.x ||
             pos.y<0 || pos.x >= vsize.y ||
             pos.z<0 || pos.x >= vsize.z)
