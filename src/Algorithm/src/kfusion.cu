@@ -224,6 +224,9 @@ bool KFusion::tracking(uint frame)
 bool KFusion::initKeyFrame(uint frame)
 {
     lastKeyFramePose=getPose();
+    lastKeyFramePose(0,3)-=params.volume_direction.x;
+    lastKeyFramePose(1,3)-=params.volume_direction.y;
+    lastKeyFramePose(2,3)-=params.volume_direction.z;
     
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
     //init new data volume
@@ -259,13 +262,15 @@ bool KFusion::raycasting(uint frame)
 
 void KFusion::integrateKeyFrameData()
 {
-    sMatrix4 p=pose;
+    std::cout<<lastKeyFramePose<<std::endl;
+    sMatrix4 delta=inverse(lastKeyFramePose)*pose;
+    //sMatrix4 delta=pose;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
     //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
 
 
     integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,
-                                         inverse(p),camMatrix,params.mu,maxweight );
+                                         inverse(delta),camMatrix,params.mu,maxweight );
 
 }
 
