@@ -170,30 +170,31 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
             pos.y<0 || pos.x >= vsize.y ||
             pos.z<0 || pos.x >= vsize.z)
         {
-//              printf("%f,%f,%f\n",pos.x,pos.y,pos.z);
              continue;
         }
         
         float tsdf=srcVol.interp(pos);
-        if(tsdf==1.0)
-            continue;
                 
         float3 fcol=srcVol.rgb_interp(pos);
+        float w_interp=srcVol.ww_interp(pos);
+                
+        if(w_interp < 1.0)
+        {            
+            continue;
+        }
         
         float2 p_data = dstVol[pix];
         float3 p_color = dstVol.getColor(pix);
         
-        float w=fmin(p_data.y,maxweight);
-        float new_w=w+1;
+        float w=p_data.y;
+        float new_w=w+w_interp;
                 
-        fcol.x = (w*p_color.x + fcol.x ) / new_w;
-        fcol.y = (w*p_color.y + fcol.y ) / new_w;
-        fcol.z = (w*p_color.z + fcol.z ) / new_w;
+        fcol.x = (w*p_color.x + w_interp*fcol.x ) / new_w;
+        fcol.y = (w*p_color.y + w_interp*fcol.y ) / new_w;
+        fcol.z = (w*p_color.z + w_interp*fcol.z ) / new_w;
             
-        p_data.x = clamp( (w*p_data.x + tsdf) / new_w, -1.f, 1.f);
-        p_data.y=p_data.y+1;
-        
-        //printf("TSDF:%f %f\n",tsdf,p_data.x);
+        p_data.x = clamp( (w*p_data.x + w_interp*tsdf) / new_w, -1.f, 1.f);
+        p_data.y=fminf(new_w, maxweight);                
         
         dstVol.set(pix,p_data, fcol);
         
@@ -242,7 +243,8 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             float2 p_data = vol[pix];
             float3 p_color = vol.getColor(pix);
 
-            float w=fmin(p_data.y,maxweight);
+            //float w=fmin(p_data.y,maxweight);
+            float w=p_data.y;
             float new_w=w+1;
 
 #ifdef USE_LAB
@@ -261,7 +263,8 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             frgb.y=clamp(frgb.y,MIN_A,MAX_A);
             frgb.z=clamp(frgb.z,MIN_B,MAX_B);
             */
-            p_data.y=p_data.y+1;
+            //p_data.y=p_data.y+1;
+            p_data.y=fminf(new_w, maxweight);
             vol.set(pix,p_data, fcol);
         }
     }

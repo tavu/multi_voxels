@@ -268,11 +268,11 @@ bool KFusion::fuseVolumes()
     { 
         VolumeCpu &v=volumes[i];  
                  
-        sprintf(filename,"/tmp/voxels/f%d_voxels",v.frame);
-        std::cout<<"FUSE:"<<v.frame<<std::endl;
+//         sprintf(filename,"/tmp/voxels/f%d_voxels",v.frame);
+//         std::cout<<"FUSE:"<<v.frame<<std::endl;
         
         keyFrameVol.initDataFromCpu(v);
-        saveVoxelsToFile(filename,keyFrameVol);
+//         saveVoxelsToFile(filename,keyFrameVol);
         
 //         std::cout<<inverse(v.pose)<<std::endl;
         fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,inverse(v.pose),maxweight);
@@ -333,7 +333,7 @@ void KFusion::integrateKeyFrameData()
     delta(1,3)+=params.volume_direction.y;
     delta(2,3)+=params.volume_direction.z;
     
-    std::cout<<delta<<std::endl;
+//     std::cout<<delta<<std::endl;
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
 
     integrateKernel<<<grid,imageBlock>>>(keyFrameVol,rawDepth,rawRgb,

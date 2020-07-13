@@ -152,6 +152,21 @@ class Volume
         {
             return data[getIdx(pos)].x;
         }
+        
+        __device__
+        float vw(const int3 & pos) const
+        {
+            return data[getIdx(pos)].y;
+        }
+        
+        __device__
+        float vww(const int3 & pos) const
+        {
+            short w=data[getIdx(pos)].y;
+            if(w>0)
+                return 1.0;
+            return 0.0;
+        }
 
         __device__
         float red(const int3 & pos) const
@@ -227,6 +242,20 @@ class Volume
             const Fptr fp = &Volume::vs;
             return generic_interp(pos,fp) * 0.00003051944088f;
         }
+        
+        __device__
+        float w_interp(const float3 & pos) const
+        {
+            const Fptr fp = &Volume::vw;
+            return generic_interp(pos,fp);
+        }
+        
+        __device__
+        float ww_interp(const float3 & pos) const
+        {
+            const Fptr fp = &Volume::vww;
+            return generic_interp(pos,fp);
+        }
 
         __device__
         float3 rgb_interp(const float3 &p) const
@@ -267,10 +296,8 @@ class Volume
             cudaMalloc((void**)&data, size*sizeof(short2));
             cudaMalloc((void**)&color, size*sizeof(float3));
             
-//             cudaMalloc((void**)&data,_resolution.x * _resolution.y * _resolution.z * sizeof(short2));
-//             cudaMalloc(&color,_resolution.x * _resolution.y * _resolution.z * sizeof(float3));
-             cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
-             cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
+            cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
+            cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
 
             voxelSize=dim/_resolution;
 
@@ -279,19 +306,9 @@ class Volume
         
         void initDataFromCpu(VolumeCpu volCpu)
         {
-//             _resolution = volCpu.resolution;
-//             dim = volCpu.dimensions;
-            
             uint size=_resolution.x * _resolution.y * _resolution.z;
-            
-//             cudaMalloc((void**)&data, size*sizeof(short2));
-//             cudaMalloc((void**)&color, size*sizeof(float3));
-                        
             cudaMemcpy(data, volCpu.data,size*sizeof(short2),cudaMemcpyHostToDevice);        
             cudaMemcpy(color, volCpu.color,size*sizeof(float3),cudaMemcpyHostToDevice);
-
-//             voxelSize=dim/_resolution;
-//             _offset=make_int3(0,0,0);
         }
         
 
