@@ -53,36 +53,30 @@ bool FusionHandler::processFrame()
 
     if(_frame>0 && (_frame % KEY_FRAME_THR)==0)
     {
-        
-#ifdef SAVE_VOXELS_TO_FILE
-        Volume vol=_fusion->getKeyFrameVolume();
-        char buf[64];
-        sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
-        saveVoxelsToFile(buf,vol);
-#endif
         _fusion->initKeyFrame(_frame);
         
         if(_fusion->keyFramesNum()==MAX_KEY_FRAMES)
         {
+
+#ifdef SAVE_VOXELS_TO_FILE
             Volume vol=_fusion->getVolume();
             char buf[64];
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
             saveVoxelsToFile(buf,vol);
-        
+#endif        
             _fusion->fuseVolumes();
-            
+
+            #ifdef SAVE_VOXELS_TO_FILE            
             vol=_fusion->getVolume();            
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
             saveVoxelsToFile(buf,vol);
+#endif
+
+#ifdef SAVE_VOLUMES_FRAME    
+            _fusion->saveVolumes((char*)"/tmp/voxels");
+#endif   
         }
     }
-    
-#ifdef SAVE_VOLUMS_FRAME    
-    if(_frame==SAVE_VOLUMS_FRAME)
-    {
-        _fusion->saveVolumes((char*)"/tmp/voxels");
-    }
-#endif
 
     bool raycast=_fusion->raycasting(_frame);
     if(!raycast)

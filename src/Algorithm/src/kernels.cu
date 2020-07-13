@@ -179,7 +179,7 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
         float w_interp=srcVol.ww_interp(pos);
                 
         if(w_interp < 1.0)
-        {            
+        {
             continue;
         }
         
