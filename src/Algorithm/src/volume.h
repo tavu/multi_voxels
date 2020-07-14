@@ -311,6 +311,18 @@ class Volume
             cudaMemcpy(color, volCpu.color,size*sizeof(float3),cudaMemcpyHostToDevice);
         }
         
+        __host__ __device__ __forceinline__ 
+        bool isPointInside(const float3 &pos) const
+        {
+            float3 vsize=getSizeInMeters();  
+            if( pos.x<0 || pos.x >= vsize.x ||
+                pos.y<0 || pos.x >= vsize.y ||
+                pos.z<0 || pos.x >= vsize.z)
+            {
+                return false;
+            }
+            return true;
+        }
 
         __host__ __device__ int3 minVoxel() const
         {

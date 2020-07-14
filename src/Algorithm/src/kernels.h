@@ -12,7 +12,11 @@ __global__ void integrate(Volume vol,
                           const float mu,
                           const float maxweight);
 
-__global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 pose,const float maxweight);
+__global__ void fuseVolumesKernel(Volume dstVol, 
+                                  Volume srcVol, 
+                                  const sMatrix4 pose,
+                                  const float3 origin,
+                                  const float maxweight);
 
 __global__ void depth2vertex(Image<float3> vertex,
                              const Image<float> depth,
@@ -52,8 +56,6 @@ __global__ void trackAndReduce(float * out,
                                const sMatrix4 view,
                                const float dist_threshold,
                                const float normal_threshold);
-
-__global__ void wrongNormalsSizeKernel(Image<int> out,const Image<TrackData> data);
 
 __global__ void compareVertexKernel(Image<float3> vertex1,
                                     Image<float3> vertex2,

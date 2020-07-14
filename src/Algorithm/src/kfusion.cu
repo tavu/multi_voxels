@@ -266,7 +266,11 @@ bool KFusion::fuseVolumes()
     { 
         VolumeCpu &v=volumes[i];  
         keyFrameVol.initDataFromCpu(v);
-        fuseVolumesKernel<<<grid, imageBlock>>>(volume,keyFrameVol,inverse(v.pose),maxweight);
+        fuseVolumesKernel<<<grid, imageBlock>>>(volume,
+                                                keyFrameVol,
+                                                inverse(v.pose),
+                                                params.volume_direction,
+                                                maxweight);
     }
     initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
     

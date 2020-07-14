@@ -142,7 +142,11 @@ __global__ void raycastKernel(Image<float3> pos3D,
     }
 }
 
-__global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 pose,const float maxweight)
+__global__ void fuseVolumesKernel(Volume dstVol, 
+                                  Volume srcVol, 
+                                  const sMatrix4 pose,
+                                  const float3 origin,
+                                  const float maxweight)
 {
     uint3 pix = make_uint3(thr2pos2());
     
@@ -162,9 +166,9 @@ __global__ void fuseVolumesKernel(Volume dstVol, Volume srcVol, const sMatrix4 p
         
         pos=pose*pos;
         
-        pos.x+=4;
-        pos.y+=4;
-        pos.z+=4;
+        pos.x+=origin.x;
+        pos.y+=origin.y;
+        pos.z+=origin.z;
         
         if( pos.x<0 || pos.x >= vsize.x ||
             pos.y<0 || pos.x >= vsize.y ||
@@ -463,9 +467,7 @@ __global__ void renderRgbKernel(Image<uchar3> render,
     {
 
         float3 vertex=vert[pos];
-        if( vertex.x>=volume.maxVoxel().x*volume.getVoxelSize().z || vertex.x<volume.minVoxel().x*volume.getVoxelSize().x ||
-            vertex.y>=volume.maxVoxel().y*volume.getVoxelSize().y || vertex.y<volume.minVoxel().y*volume.getVoxelSize().y ||
-            vertex.z>=volume.maxVoxel().z*volume.getVoxelSize().x || vertex.z<volume.minVoxel().z*volume.getVoxelSize().z)
+        if(!volume.isPointInside(vertex) )
         {
             render.el() = make_uchar3(0, 0, 0);
         }
@@ -686,25 +688,6 @@ __global__ void compareVertexKernel(Image<float3> vertex1,
     out[pixel]=dist;
 }
 
-__global__ void wrongNormalsSizeKernel(Image<int> out,const Image<TrackData> data)
-{
-    const uint2 pos = thr2pos2();
-    if(data[pos].result!=1 )
-        out[pos]=1;
-    else
-        out[pos]=0;
-    /*
-    switch (data[pos].result)
-    {
-        case  1: out[pos] = make_uchar3(128, 128, 128);	break; // ok
-        case -1: out[pos] = make_uchar3(0, 0, 0);	break; // no input
-        case -2: out[pos] = make_uchar3(255, 0, 0);	break; // not in image
-        case -3: out[pos] = make_uchar3(0, 255, 0);	break; // no correspondence
-        case -4: out[pos] = make_uchar3(0, 0, 255);	break; // too far away
-        case -5: out[pos] = make_uchar3(255, 255, 0);	break; // wrong normal
-    }
-    */
-}
 
 //=================ICP COVARIANCE======================
 

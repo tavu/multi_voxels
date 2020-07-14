@@ -54,7 +54,8 @@ bool FusionHandler::processFrame()
     if(_frame>0 && (_frame % KEY_FRAME_THR)==0)
     {
         _fusion->initKeyFrame(_frame);
-        
+
+#ifdef MAX_KEY_FRAMES        
         if(_fusion->keyFramesNum()==MAX_KEY_FRAMES)
         {
 
@@ -63,7 +64,7 @@ bool FusionHandler::processFrame()
             char buf[64];
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
             saveVoxelsToFile(buf,vol);
-#endif        
+#endif //SAVE_VOXELS_TO_FILE       
             
             _fusion->fuseVolumes();            
             
@@ -71,14 +72,16 @@ bool FusionHandler::processFrame()
             vol=_fusion->getVolume();            
             sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
             saveVoxelsToFile(buf,vol);
-#endif
+#endif //SAVE_VOXELS_TO_FILE
 
 #ifdef SAVE_VOLUMES_FRAME    
             _fusion->saveVolumes((char*)"/tmp/voxels");
-#endif   
+#endif //SAVE_VOLUMES_FRAME
             _fusion->clearKeyFramesData();
         }
+#endif  //MAX_KEY_FRAMES
     }
+
 
     bool raycast=_fusion->raycasting(_frame);
     if(!raycast)
