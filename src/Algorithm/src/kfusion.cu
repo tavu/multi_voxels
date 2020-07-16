@@ -15,7 +15,8 @@ dim3 raycastBlock = dim3(32, 8);
 
 KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     :params(par),
-    _tracked(false)
+    _tracked(false),
+    _frame(-1)
 {
     uint3 vr = make_uint3(params.volume_resolution.x,
                           params.volume_resolution.y,
@@ -121,42 +122,58 @@ KFusion::~KFusion()
     printCUDAError();
 }
 
-bool KFusion::processFrame(int _frame,const float *inputDepth, const uchar3 *rgb, bool isKeyFrame)
+bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *rgb, bool isKeyFrame)
 {
-//       _frame++;
-    std::cout<<"[FRAME="<<_frame<<"]"<<std::endl;
+    _frame++;
+    std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
-    _tracked=tracking(_frame);
-    bool integrated=integration(_frame);
+    _tracked=tracking(frame_id);
+    bool integrated=integration(frame_id);
 
     if(!_tracked)
     {
-        std::cerr<<"[FRAME="<<_frame<<"] Tracking faild!"<<std::endl;
+        std::cerr<<"[FRAME="<<frame_id<<"] Tracking faild!"<<std::endl;
     }
 
     if(isKeyFrame)
     {
-        std::cout<<"[FRAME="<<_frame<<"] Key frame."<<std::endl;
-        initKeyFrame(_frame);        
+        std::cout<<"[FRAME="<<frame_id<<"] Key frame."<<std::endl;
+        initKeyFrame(frame_id);        
     }
     
     if(!integrated)
     {
-        std::cerr<<"[FRAME="<<_frame<<"] Integration faild!"<<std::endl;        
+        std::cerr<<"[FRAME="<<frame_id<<"] Integration faild!"<<std::endl;        
     }
     else
     {
         integrateKeyFrameData();
     }
 
-    bool raycast=raycasting(_frame);
+    bool raycast=raycasting(frame_id);
     if(!raycast)
     {
-        std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
+        std::cerr<<"[FRAME="<<frame_id<<"] Raycast faild!"<<std::endl;
     }
 
     return _tracked;
+}
+
+void KFusion::dropKeyFrame(int val)
+{
+    for(auto it = volumes.begin(); it != volumes.end(); it++) 
+    {    
+        if(it->frame == val)
+        {
+            short2 *data=it->data;
+            float3 *color=it->color;
+            volumes.erase(it); 
+            delete[] data;
+            delete[] color;
+            return;
+        }
+    }
 }
 
 void KFusion::reset()
@@ -321,8 +338,8 @@ void KFusion::clearKeyFramesData()
     {
         VolumeCpu &v=volumes[i];
         
-        delete v.data;
-        delete v.color;
+        delete[] v.data;
+        delete[] v.color;
     }
     volumes.clear();
 }
@@ -389,7 +406,7 @@ void KFusion::integrateKeyFrameData()
 bool KFusion::integration(uint frame)
 {
     //bool doIntegrate = checkPoseKernel(pose, oldPose, output.data(),params.computationSize, track_threshold);
-    if (_tracked || frame <= 3)
+    if (_tracked || _frame <= 3)
     {
         printCUDAError();
         TICK("integrate");

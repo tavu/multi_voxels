@@ -96,6 +96,7 @@ class KFusion
         }
         
         void clearKeyFramesData();
+        void dropKeyFrame(int val);
         
     private:
         int _frame;

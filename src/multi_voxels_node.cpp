@@ -3,6 +3,8 @@
 //#include<swap>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Int32.h>
+
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud.h>
 #include <geometry_msgs/Point32.h>
@@ -46,6 +48,7 @@
 #define DEPTH_TOPIC "/camera/depth/image_rect"
 #define KEY_FRAME_TOPIC "/isKeyFrame"
 #define PUB_ODOM_PATH_TOPIC "/multi_voxels/odom_path"
+#define DROP_KF_TOPIC "/drop_key_frame"
 
 #define PUB_VOLUME_TOPIC "/multi_voxels/volume_rendered"
 #define PUB_ODOM_TOPIC "/multi_voxels/odom"
@@ -161,7 +164,8 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         ROS_ERROR("Not supported depth format.");
     }
     
-    frame++;
+    //frame++;
+    frame=depth->header.seq;
     
     memcpy(inputRGB,cv_ptr->image.data ,params.inputSize.y*params.inputSize.x*sizeof(uchar)*3 );
     memcpy(inputDepthFl,depth->data.data(),params.inputSize.y*params.inputSize.x*sizeof(float) );
@@ -212,10 +216,17 @@ void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
     fusion=new KFusion(params,poseMatrix);
 }
 
+void dropKeyFrameCb(const std_msgs::Int32 &msg)
+{
+    int val=msg.data;
+    std::cout<<"Dropping key frame:"<<val<<std::endl;
+    fusion->dropKeyFrame(val);
+}
+
 void optimizedPathCb(const nav_msgs::Path &msg)
 {
     ROS_INFO("Got optimized poses");
-    fusion->initKeyFrame(frame);
+//     fusion->initKeyFrame(frame);
     if(fusion->keyFramesNum() != msg.poses.size())
     {
         ROS_ERROR("Got %ld poses but %d is expected.",msg.poses.size(),fusion->keyFramesNum());
@@ -366,7 +377,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "multi_voxels_node",ros::init_options::AnonymousName);
     ros::NodeHandle n_p("~");
 
-    std::string cam_info_topic,depth_topic,rgb_topic,key_frame_topic,opt_path_topic;    
+    std::string cam_info_topic,depth_topic,rgb_topic,key_frame_topic,opt_path_topic,drop_kf_topic;    
 
     if(!n_p.getParam("cam_info_topic", cam_info_topic))
     {
@@ -387,6 +398,10 @@ int main(int argc, char **argv)
     if(!n_p.getParam("opt_path_topic", opt_path_topic))
     {
         opt_path_topic=std::string(OPT_PATH_TOPIC);
+    }
+    if(!n_p.getParam("drop_kf_topic", drop_kf_topic))
+    {
+        drop_kf_topic=std::string(DROP_KF_TOPIC);
     }
     
 
@@ -417,7 +432,8 @@ int main(int argc, char **argv)
         }
     }
 
-    ros::Subscriber sub = n_p.subscribe(opt_path_topic, 10, optimizedPathCb);
+    ros::Subscriber optimized_path_sub = n_p.subscribe(opt_path_topic, 10, optimizedPathCb);
+    ros::Subscriber drop_kf_subsub = n_p.subscribe(drop_kf_topic, 10, dropKeyFrameCb);
 
     
     ROS_INFO("Waiting depth message");
