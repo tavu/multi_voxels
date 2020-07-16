@@ -6,6 +6,7 @@
 #include"volume.h"
 #include<vector>
 #include<iostream>
+
 class KFusion
 {
     public:
@@ -16,9 +17,11 @@ class KFusion
         ~KFusion();
 
         void reset();
+        
+        bool processFrame(int _frame, const float *inputDepth, const uchar3 *rgb, bool isKeyFrame);
 
         bool preprocessing(const ushort * inputDepth,const uchar3 *rgb);
-        bool preprocessing2(const float *inputDepth,const uchar3 *rgb) ;
+        bool preprocessing(const float *inputDepth,const uchar3 *rgb) ;
 
         bool tracking(uint frame);
         bool raycasting(uint frame);
@@ -66,6 +69,16 @@ class KFusion
             return keyFrameVol;
         }
 
+        void setKeyFramePose(int idx, const sMatrix4 &p)
+        {
+            volumes[idx].pose=p;
+        }
+        
+        sMatrix4 getKeyFramePose(int idx) const
+        {
+            return volumes[idx].pose;
+        }
+        
         void integrateKeyFrameData();
         bool deIntegration(sMatrix4 p,const Host &depth,const Host &rgb);
         bool reIntegration(sMatrix4 pose,const Host &depth,const Host &rgb);
@@ -85,6 +98,7 @@ class KFusion
         void clearKeyFramesData();
         
     private:
+        int _frame;
         bool _tracked;
         bool forcePose;
         float step;

@@ -25,7 +25,7 @@ bool FusionHandler::preprocess(uint16_t *depth,uchar3 *rgb)
 
 bool FusionHandler::preprocess(float *depth,uchar3 *rgb)
 {
-    _fusion->preprocessing2(depth,rgb);
+    _fusion->preprocessing(depth,rgb);
     return true;
 }
 

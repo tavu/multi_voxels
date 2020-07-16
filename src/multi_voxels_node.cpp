@@ -25,9 +25,8 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-// #include <actionlib/client/simple_action_client.h>
-
-#include<fusionHandler.h>
+// #include<fusionHandler.h>
+// #include<kfusion.h>
 #include<kparams.h>
 #include<kfusion.h>
 #include<volume.h>
@@ -38,16 +37,20 @@
 
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <nav_msgs/Path.h>
 
-// #include <std_srvs/SetBool.h>
+#include<g2o_slam/boolStamped.h>
 
 #define CAM_INFO_TOPIC "/camera/depth/camera_info"
 #define RGB_TOPIC "/camera/rgb/image_rect_color"
 #define DEPTH_TOPIC "/camera/depth/image_rect"
+#define KEY_FRAME_TOPIC "/isKeyFrame"
+#define PUB_ODOM_PATH_TOPIC "/multi_voxels/odom_path"
 
 #define PUB_VOLUME_TOPIC "/multi_voxels/volume_rendered"
 #define PUB_ODOM_TOPIC "/multi_voxels/odom"
 #define PUB_POINTS_TOPIC "/multi_voxels/pointCloud"
+#define OPT_PATH_TOPIC "/odom/path"
 
 #define DEPTH_FRAME "camera_rgb_optical_frame"
 
@@ -62,8 +65,8 @@ typedef unsigned char uchar;
 
 
 kparams_t params;
-FusionHandler *kfHandler=nullptr;
-int frame = 0;
+KFusion *fusion=nullptr;
+int frame = -1;
 
 //Buffers
 uint16_t *inputDepth=0;
@@ -75,107 +78,74 @@ uchar3 *volumeRender;
 bool publish_volume=true;
 bool publish_points=true;
 bool publish_key_frame=true;
-
 bool publish_key_points = true;
 
 int publish_points_rate;
 int key_frame_thr;
 int keypt_size;
 
-bool use_bag;
-
 //ros publishers
 ros::Publisher volume_pub;
-ros::Publisher odom_pub ;
+ros::Publisher odom_pub;
+ros::Publisher odom_path_pub;
 ros::Publisher points_pub;
 ros::Publisher key_frame_pub;
 ros::Publisher harris_pub;
 ros::Publisher pcl_pub0, pcl_pub1;
 sensor_msgs::PointCloud pcl_msg0, pcl_msg1;
+
+//odom path
+nav_msgs::Path odomPath;
+
 //frames
 std::string depth_frame,vo_frame,base_link_frame,odom_frame;
 
-bool keyFrameProcessing=false;
 //functions
 void publishVolumeProjection();
 void publishOdom();
-void publishPoints();
-
-int leftFeetValue=0;
-int rightFeetValue=0;
-int doubleSupport=0;
-int passedFromLastKeyFrame=0;
-
-//keypts vertex
-std::vector<float3> keyVert;
-std::vector<float3> prevKeyVert;
-
-//poses
-sMatrix4 keyFramePose;
-sMatrix4 prevKeyFramePose;
-
-//visualization data
-uchar3 *featImage;
-
-geometry_msgs::Pose transform2pose(const geometry_msgs::Transform &trans);
-
-
-#define PUB_ODOM_PATH_TOPIC "/multi_voxels/odom_path"
-nav_msgs::Path odomPath, isamPath;
-ros::Publisher odom_path_pub ;
 void publishOdomPath(geometry_msgs::Pose &p);
+void publishPoints();
+sMatrix4 homoFromRosPose(const geometry_msgs::Pose &p);
 
 
-void publishFeatures();
-void publishKeyPoints();
 
-void stopBag();
-void contBag();
-
-// geometry_msgs::Pose rosPoseFromHomo(sMatrix4 &pose)
-// {
-//     geometry_msgs::Pose ret;
-// 
-//     pose(0,3)-=params.volume_direction.x;
-//     pose(1,3)-=params.volume_direction.y;
-//     pose(2,3)-=params.volume_direction.z;
-//     pose=fromVisionCord(pose);
-// 
-//     tf::Matrix3x3 rot_matrix( pose(0,0),pose(0,1),pose(0,2),
-//                               pose(1,0),pose(1,1),pose(1,2),
-//                               pose(2,0),pose(2,1),pose(2,2) );
-//     //rot_matrix=rot_matrix.inverse ();
-//     tf::Quaternion q;
-//     rot_matrix.getRotation(q);
-// 
-//     ret.position.x=pose(0,3);
-//     ret.position.y=pose(1,3);
-//     ret.position.z=pose(2,3);
-//     ret.orientation.x=q.getX();
-//     ret.orientation.y=q.getY();
-//     ret.orientation.z=q.getZ();
-//     ret.orientation.w=q.getW();
-//     return ret;
-// }
-
-geometry_msgs::Pose transform2pose(const geometry_msgs::Transform &trans)
+sMatrix4 homoFromRosPose(const geometry_msgs::Pose &p)
 {
-    geometry_msgs::Pose pose;
-    pose.position.x=trans.translation.x;
-    pose.position.y=trans.translation.y;
-    pose.position.z=trans.translation.z;
-
-    pose.orientation.x=trans.rotation.x;
-    pose.orientation.y=trans.rotation.y;
-    pose.orientation.z=trans.rotation.z;
-    pose.orientation.w=trans.rotation.w;
-
-    return pose;
+    sMatrix4 ret;
+    //ROS is stupid
+    tf::Quaternion q(p.orientation.x,
+                     p.orientation.y,
+                     p.orientation.z,
+                     p.orientation.w);
+    
+    
+    tf::Matrix3x3 rot(q);
+    
+    for(int i=0;i<3;i++)
+    {
+        for(int j=0;j<3;j++)
+        {
+             ret(i,j)=rot[i][j];
+        }
+    }
+    ret(0,3)=p.position.x;
+    ret(1,3)=p.position.y;
+    ret(2,3)=p.position.z;
+    ret(3,3)=1;        
+    return ret;
+    
 }
 
-void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,const sensor_msgs::ImageConstPtr &depth)
+void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
+                           const sensor_msgs::ImageConstPtr &depth,
+                           const g2o_slam::boolStampedConstPtr &keyFrame)
 {    
-    passedFromLastKeyFrame++;
+    if(rgb->header.seq != depth->header.seq || rgb->header.seq != keyFrame->header.seq)
+    {
+        ROS_ERROR("Wrong sequence numbers.");
+        return;
+    }
+    
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
@@ -186,32 +156,17 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,const sensor_ms
         ROS_ERROR("cv_bridge RGB exception: %s", e.what());
         return;
     }
-    memcpy(inputRGB,cv_ptr->image.data ,params.inputSize.y*params.inputSize.x*sizeof(uchar)*3 );
-    
-    if(strcmp(depth->encoding.c_str(), "32FC1")==0) //32FC1
-    {
-        if(inputDepthFl==0)
-            inputDepthFl=new float[params.inputSize.x * params.inputSize.y];
-            
-        memcpy(inputDepthFl,depth->data.data(),params.inputSize.y*params.inputSize.x*sizeof(float) );
-        kfHandler->preprocess(inputDepthFl,inputRGB);
-    }
-    else if(strcmp(depth->encoding.c_str(), "16UC1")==0) //16UC1
-    {
-        if(inputDepth==0)
-            inputDepth = new uint16_t[params.inputSize.x * params.inputSize.y];   
-        
-        memcpy(inputDepth,depth->data.data(),params.inputSize.y*params.inputSize.x*2);
-        kfHandler->preprocess(inputDepth,inputRGB);
-    }
-    else
+    if(strcmp(depth->encoding.c_str(), "32FC1")!=0)
     {
         ROS_ERROR("Not supported depth format.");
-        return;
     }
     
-
-    kfHandler->processFrame();
+    frame++;
+    
+    memcpy(inputRGB,cv_ptr->image.data ,params.inputSize.y*params.inputSize.x*sizeof(uchar)*3 );
+    memcpy(inputDepthFl,depth->data.data(),params.inputSize.y*params.inputSize.x*sizeof(float) );
+    fusion->processFrame(frame, inputDepthFl, inputRGB, keyFrame->indicator.data);
+    
     publishOdom();
 
     if(publish_volume)
@@ -221,9 +176,7 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,const sensor_ms
     
     
     if(publish_points && frame % publish_points_rate ==0)
-         publishPoints();
-    
-    frame++;
+         publishPoints();    
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
@@ -250,17 +203,64 @@ void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
   
 
     inputRGB = new uchar3[params.inputSize.x * params.inputSize.y];
+    inputDepthFl=new float[params.inputSize.x * params.inputSize.y];
+    
     if(publish_volume)    
         volumeRender = new uchar3[params.computationSize.x * params.computationSize.y];    
     else
         volumeRender=nullptr;
-    kfHandler=new FusionHandler(params,poseMatrix);
+    fusion=new KFusion(params,poseMatrix);
+}
+
+void optimizedPathCb(const nav_msgs::Path &msg)
+{
+    ROS_INFO("Got optimized poses");
+    fusion->initKeyFrame(frame);
+    if(fusion->keyFramesNum() != msg.poses.size())
+    {
+        ROS_ERROR("Got %ld poses but %d is expected.",msg.poses.size(),fusion->keyFramesNum());
+        //return;
+    }
+    
+    for(int i=0;i<msg.poses.size();i++)
+    {
+        geometry_msgs::Pose pose=msg.poses[i].pose;
+        sMatrix4 p=homoFromRosPose(pose);
+        
+        p(0,3)+=params.volume_direction.x;
+        p(1,3)+=params.volume_direction.y;
+        p(2,3)+=params.volume_direction.z;
+        
+        sMatrix4 prevPose=fusion->getKeyFramePose(i);
+        
+        fusion->setKeyFramePose(i,p);
+        
+        std::cout<<prevPose<<std::endl;
+        std::cout<<p<<std::endl;
+        
+        std::cout<<std::endl;
+    }
+    
+#ifdef SAVE_VOXELS_TO_FILE
+        Volume vol=fusion->getVolume();
+        char buf[64];
+        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+        saveVoxelsToFile(buf,vol);
+#endif        
+
+        ROS_INFO("Fusing volumes");
+        fusion->fuseVolumes();            
+        
+#ifdef SAVE_VOXELS_TO_FILE            
+        vol=fusion->getVolume();            
+        sprintf(buf,"/tmp/voxels/f%d_voxels",frame+1);
+        saveVoxelsToFile(buf,vol);
+#endif 
 }
 
 void publishVolumeProjection()
-{
-    KFusion *kFusion=kfHandler->fusion();
-    kFusion->renderImage(volumeRender);
+{    
+    fusion->renderImage(volumeRender);
     
     sensor_msgs::Image image;
     image.header.stamp=ros::Time::now();
@@ -281,12 +281,12 @@ void publishVolumeProjection()
 
 void publishOdom()
 {
-    sMatrix4 pose = kfHandler->getPose();
+    sMatrix4 pose = fusion->getPose();
 
     pose(0,3)-=params.volume_direction.x;
     pose(1,3)-=params.volume_direction.y;
     pose(2,3)-=params.volume_direction.z;
-    pose=fromVisionCord(pose);
+    //pose=fromVisionCord(pose);
 
     tf::Matrix3x3 rot_matrix( pose(0,0),pose(0,1),pose(0,2),
                               pose(1,0),pose(1,1),pose(1,2),
@@ -315,7 +315,6 @@ void publishOdom()
     //odom.child_frame_id = "visual_link";
     odom.child_frame_id = DEPTH_FRAME;
 
-
     odom.pose.pose=odom_pose;
     odom_pub.publish(odom);
 
@@ -339,10 +338,8 @@ void publishOdomPath(geometry_msgs::Pose &p)
 
 void publishPoints()
 {
-    KFusion *kFusion=kfHandler->fusion();
-    
     std::vector<float3> vertices;
-    kFusion->getVertices(vertices);
+    fusion->getVertices(vertices);
     
     sensor_msgs::PointCloud pcloud;
     pcloud.header.stamp = ros::Time::now();
@@ -369,7 +366,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "multi_voxels_node",ros::init_options::AnonymousName);
     ros::NodeHandle n_p("~");
 
-    std::string cam_info_topic,depth_topic,rgb_topic;    
+    std::string cam_info_topic,depth_topic,rgb_topic,key_frame_topic,opt_path_topic;    
 
     if(!n_p.getParam("cam_info_topic", cam_info_topic))
     {
@@ -383,6 +380,15 @@ int main(int argc, char **argv)
     {
         rgb_topic=std::string(RGB_TOPIC);
     }
+    if(!n_p.getParam("key_frame_topic", key_frame_topic))
+    {
+        key_frame_topic=std::string(KEY_FRAME_TOPIC);
+    }
+    if(!n_p.getParam("opt_path_topic", opt_path_topic))
+    {
+        opt_path_topic=std::string(OPT_PATH_TOPIC);
+    }
+    
 
     n_p.param("publish_volume",publish_volume,true);    
     n_p.param("publish_points",publish_points,false);
@@ -411,17 +417,22 @@ int main(int argc, char **argv)
         }
     }
 
+    ros::Subscriber sub = n_p.subscribe(opt_path_topic, 10, optimizedPathCb);
+
+    
     ROS_INFO("Waiting depth message");
 
+    
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub(n_p, rgb_topic, 100);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(n_p, depth_topic, 100);
+    message_filters::Subscriber<g2o_slam::boolStamped> key_frame_sub(n_p, key_frame_topic, 100);
 
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, g2o_slam::boolStamped> MySyncPolicy;
 
 
-    message_filters::Synchronizer<MySyncPolicy> sync( MySyncPolicy(100), rgb_sub, depth_sub);
+    message_filters::Synchronizer<MySyncPolicy> sync( MySyncPolicy(100), rgb_sub, depth_sub,key_frame_sub);
 
-    sync.registerCallback(boost::bind(&imageAndDepthCallback, _1, _2));
+    sync.registerCallback(boost::bind(&imageAndDepthCallback, _1, _2, _3));
       
     ros::spin();
 }

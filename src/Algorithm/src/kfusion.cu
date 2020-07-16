@@ -121,13 +121,51 @@ KFusion::~KFusion()
     printCUDAError();
 }
 
+bool KFusion::processFrame(int _frame,const float *inputDepth, const uchar3 *rgb, bool isKeyFrame)
+{
+//       _frame++;
+    std::cout<<"[FRAME="<<_frame<<"]"<<std::endl;
+
+    preprocessing(inputDepth,rgb);
+    _tracked=tracking(_frame);
+    bool integrated=integration(_frame);
+
+    if(!_tracked)
+    {
+        std::cerr<<"[FRAME="<<_frame<<"] Tracking faild!"<<std::endl;
+    }
+
+    if(isKeyFrame)
+    {
+        std::cout<<"[FRAME="<<_frame<<"] Key frame."<<std::endl;
+        initKeyFrame(_frame);        
+    }
+    
+    if(!integrated)
+    {
+        std::cerr<<"[FRAME="<<_frame<<"] Integration faild!"<<std::endl;        
+    }
+    else
+    {
+        integrateKeyFrameData();
+    }
+
+    bool raycast=raycasting(_frame);
+    if(!raycast)
+    {
+        std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
+    }
+
+    return _tracked;
+}
+
 void KFusion::reset()
 {
     dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
     initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
 }
 
-bool KFusion::preprocessing2(const float *inputDepth,const uchar3 *inputRgb)
+bool KFusion::preprocessing(const float *inputDepth,const uchar3 *inputRgb)
 {
     cudaMemcpy(rawDepth.data(), inputDepth, params.inputSize.x * params.inputSize.y * sizeof(float),cudaMemcpyHostToDevice);
     cudaMemcpy(rawRgb.data(), inputRgb, params.inputSize.x * params.inputSize.y * sizeof(uchar3),cudaMemcpyHostToDevice);
