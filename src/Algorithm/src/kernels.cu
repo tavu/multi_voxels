@@ -180,15 +180,19 @@ __global__ void fuseVolumesKernel(Volume dstVol,
         float tsdf=srcVol.interp(pos);
                 
         float3 fcol=srcVol.rgb_interp(pos);
-        float w_interp=srcVol.ww_interp(pos);
-                
-        if(w_interp < 1.0)
-        {
-            continue;
-        }
+        //float w_interp=srcVol.ww_interp(pos);
+        float w_interp=1;
+        
+//         if(w_interp < 1.0)
+//         {
+//             continue;
+//         }
         
         float2 p_data = dstVol[pix];
         float3 p_color = dstVol.getColor(pix);
+        
+        if(tsdf == 1.0)
+            continue;
         
         float w=p_data.y;
         float new_w=w+w_interp;

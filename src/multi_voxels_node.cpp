@@ -41,7 +41,7 @@
 #include <sensor_msgs/image_encodings.h>
 #include <nav_msgs/Path.h>
 
-#include<g2o_slam/boolStamped.h>
+#include<key_frame_publisher/boolStamped.h>
 
 #define CAM_INFO_TOPIC "/camera/depth/camera_info"
 #define RGB_TOPIC "/camera/rgb/image_rect_color"
@@ -141,7 +141,7 @@ sMatrix4 homoFromRosPose(const geometry_msgs::Pose &p)
 
 void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
                            const sensor_msgs::ImageConstPtr &depth,
-                           const g2o_slam::boolStampedConstPtr &keyFrame)
+                           const key_frame_publisher::boolStampedConstPtr &keyFrame)
 {    
     if(rgb->header.seq != depth->header.seq || rgb->header.seq != keyFrame->header.seq)
     {
@@ -226,7 +226,7 @@ void dropKeyFrameCb(const std_msgs::Int32 &msg)
 void optimizedPathCb(const nav_msgs::Path &msg)
 {
     ROS_INFO("Got optimized poses");
-//     fusion->initKeyFrame(frame);
+    fusion->initKeyFrame(frame);
     if(fusion->keyFramesNum() != msg.poses.size())
     {
         ROS_ERROR("Got %ld poses but %d is expected.",msg.poses.size(),fusion->keyFramesNum());
@@ -245,9 +245,10 @@ void optimizedPathCb(const nav_msgs::Path &msg)
         sMatrix4 prevPose=fusion->getKeyFramePose(i);
         
         fusion->setKeyFramePose(i,p);
-        
+        sMatrix4 delta = inverse(p)*prevPose;
         std::cout<<prevPose<<std::endl;
         std::cout<<p<<std::endl;
+        std::cout<<delta<<std::endl;
         
         std::cout<<std::endl;
     }
@@ -407,7 +408,7 @@ int main(int argc, char **argv)
 
     n_p.param("publish_volume",publish_volume,true);    
     n_p.param("publish_points",publish_points,false);
-    n_p.param("publish_points_rate",publish_points_rate,PUBLISH_POINT_RATE);        
+    n_p.param("publish_points_rate",publish_points_rate, PUBLISH_POINT_RATE);        
 
     ROS_INFO("Depth Frame:%s",depth_frame.c_str());      
     
@@ -441,9 +442,9 @@ int main(int argc, char **argv)
     
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub(n_p, rgb_topic, 100);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(n_p, depth_topic, 100);
-    message_filters::Subscriber<g2o_slam::boolStamped> key_frame_sub(n_p, key_frame_topic, 100);
+    message_filters::Subscriber<key_frame_publisher::boolStamped> key_frame_sub(n_p, key_frame_topic, 100);
 
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, g2o_slam::boolStamped> MySyncPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, key_frame_publisher::boolStamped> MySyncPolicy;
 
 
     message_filters::Synchronizer<MySyncPolicy> sync( MySyncPolicy(100), rgb_sub, depth_sub,key_frame_sub);
