@@ -226,14 +226,13 @@ void dropKeyFrameCb(const std_msgs::Int32 &msg)
 void optimizedPathCb(const nav_msgs::Path &msg)
 {
     ROS_INFO("Got optimized poses");
-    fusion->initKeyFrame(frame);
     if(fusion->keyFramesNum() != msg.poses.size())
     {
         ROS_ERROR("Got %ld poses but %d is expected.",msg.poses.size(),fusion->keyFramesNum());
         //return;
     }
     
-    for(int i=0;i<msg.poses.size();i++)
+    for(int i=0;i<msg.poses.size()-1;i++)
     {
         geometry_msgs::Pose pose=msg.poses[i].pose;
         sMatrix4 p=homoFromRosPose(pose);
@@ -246,12 +245,25 @@ void optimizedPathCb(const nav_msgs::Path &msg)
         
         fusion->setKeyFramePose(i,p);
         sMatrix4 delta = inverse(p)*prevPose;
-        std::cout<<prevPose<<std::endl;
-        std::cout<<p<<std::endl;
-        std::cout<<delta<<std::endl;
+//         std::cout<<prevPose<<std::endl;
+//         std::cout<<p<<std::endl;
+//         std::cout<<delta<<std::endl;
         
-        std::cout<<std::endl;
+//         std::cout<<std::endl;
     }
+    
+    geometry_msgs::Pose lastPose=msg.poses.back().pose;
+    sMatrix4 lastPoseMat=homoFromRosPose(lastPose);
+    
+    lastPoseMat(0,3)+=params.volume_direction.x;
+    lastPoseMat(1,3)+=params.volume_direction.y;
+    lastPoseMat(2,3)+=params.volume_direction.z;
+    
+    sMatrix4 lastKFpose=fusion->getLastKFPose();
+    sMatrix4 kfpose=fusion->getPose();
+    
+    sMatrix4 delta=inverse(lastKFpose)*kfpose;
+    sMatrix4 newKfPose=lastPoseMat*delta;
     
 #ifdef SAVE_VOXELS_TO_FILE
         Volume vol=fusion->getVolume();
@@ -262,6 +274,9 @@ void optimizedPathCb(const nav_msgs::Path &msg)
 
         ROS_INFO("Fusing volumes");
         fusion->fuseVolumes();            
+        fusion->fuseLastKeyFrame(lastPoseMat);
+        fusion->setPose(newKfPose);
+        
         
 #ifdef SAVE_VOXELS_TO_FILE            
         vol=fusion->getVolume();            

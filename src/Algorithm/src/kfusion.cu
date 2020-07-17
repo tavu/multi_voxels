@@ -16,7 +16,9 @@ dim3 raycastBlock = dim3(32, 8);
 KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     :params(par),
     _tracked(false),
-    _frame(-1)
+    _frame(-1),
+    lastKeyFrame(0),
+    lastFrame(0)
 {
     uint3 vr = make_uint3(params.volume_resolution.x,
                           params.volume_resolution.y,
@@ -28,6 +30,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
 
     volume.init(vr,vd);
     keyFrameVol.init(vr,vd);
+    fusionVol.init(vr,vd);
 
     pose = initPose;
     oldPose=pose;
@@ -125,6 +128,7 @@ KFusion::~KFusion()
 bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *rgb, bool isKeyFrame)
 {
     _frame++;
+    lastFrame=frame_id;
     std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
@@ -156,6 +160,7 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
     {
         std::cerr<<"[FRAME="<<frame_id<<"] Raycast faild!"<<std::endl;
     }
+    
 
     return _tracked;
 }
@@ -305,7 +310,7 @@ bool KFusion::initKeyFrame(uint frame)
             
     dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
     initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
-    
+    lastKeyFrame=frame;
     return true;
 }
 
@@ -320,15 +325,32 @@ bool KFusion::fuseVolumes()
     for(int i=0;i<volumes.size();i++)
     { 
         VolumeCpu &v=volumes[i];  
-        keyFrameVol.initDataFromCpu(v);
+        fusionVol.initDataFromCpu(v);
         fuseVolumesKernel<<<grid, imageBlock>>>(volume,
-                                                keyFrameVol,
+                                                fusionVol,
                                                 inverse(v.pose),
                                                 params.volume_direction,
                                                 maxweight);
     }
-    initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
     
+  
+    
+    //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
+    
+    return true;
+}
+
+bool KFusion::fuseLastKeyFrame(sMatrix4 &pose)
+{
+    dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
+    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));    
+    lastKeyFramePose=pose;
+    fuseVolumesKernel<<<grid, imageBlock>>>(volume,
+                                            keyFrameVol,
+                                            inverse(lastKeyFramePose),
+                                            params.volume_direction,
+                                            maxweight);  
+
     return true;
 }
 

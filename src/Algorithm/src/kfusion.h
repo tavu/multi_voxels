@@ -80,6 +80,11 @@ class KFusion
             return volumes[idx].pose;
         }
         
+        sMatrix4 getLastKFPose() const
+        {
+            return  lastKeyFramePose;
+        }
+        
         void integrateKeyFrameData();
         bool deIntegration(sMatrix4 p,const Host &depth,const Host &rgb);
         bool reIntegration(sMatrix4 pose,const Host &depth,const Host &rgb);
@@ -98,6 +103,8 @@ class KFusion
         
         void clearKeyFramesData();
         void dropKeyFrame(int val);
+        
+        bool fuseLastKeyFrame(sMatrix4 &pose);
         
     private:
         int _frame;
@@ -120,6 +127,9 @@ class KFusion
         Volume volume;
         float largestep;
         Volume keyFrameVol;
+        Volume fusionVol;
+        int lastKeyFrame;
+        int lastFrame;
 
         const kparams_t &params;
 
