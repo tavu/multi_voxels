@@ -227,32 +227,32 @@ void optimizedPathCb(const nav_msgs::Path &msg)
 {
     ROS_INFO("Got optimized poses");
     int msgPosesSize= msg.poses.size();
-    int keyFramesSize=fusion->keyFramesNum()+1;
+    int keyFramesSize=fusion->keyFramesNum();
     sMatrix4 lastKFPose;
     sMatrix4 currentPose;
 
-    //Got same numbers of optimized poses with key frames.
-    //Last optimized pose is the current key frame
-    if(msgPosesSize==keyFramesSize)
+    if(msgPosesSize>keyFramesSize+1)
+    {
+        ROS_ERROR("Got more poses than key frames");
+        ROS_ERROR("%d poses is expected but got %d",keyFramesSize+1,msgPosesSize);
+        return ;
+    }
+
+    //The last optimized pose is the pose of the current key frame
+    if(msgPosesSize==keyFramesSize+1)
     {
         for(int i=0;i<msgPosesSize-1;i++)
         {
-            geometry_msgs::Pose pose=msg.poses[i].pose;
-            sMatrix4 p=homoFromRosPose(pose);
+            geometry_msgs::Pose poseRos=msg.poses[i].pose;
+            sMatrix4 optPose=homoFromRosPose(poseRos);
             
-            p(0,3)+=params.volume_direction.x;
-            p(1,3)+=params.volume_direction.y;
-            p(2,3)+=params.volume_direction.z;
+            optPose(0,3)+=params.volume_direction.x;
+            optPose(1,3)+=params.volume_direction.y;
+            optPose(2,3)+=params.volume_direction.z;                
             
-            sMatrix4 prevPose=fusion->getKeyFramePose(i);
-            
-            fusion->setKeyFramePose(i,p);
-            //sMatrix4 delta = inverse(p)*prevPose;
-            //std::cout<<prevPose<<std::endl;
-            //std::cout<<p<<std::endl;
-            //std::cout<<delta<<std::endl;
+            fusion->setKeyFramePose(i,optPose);
         }
-            
+
         geometry_msgs::Pose lastOptPoseRos=msg.poses.back().pose;
         lastKFPose=homoFromRosPose(lastOptPoseRos);
         
@@ -265,82 +265,38 @@ void optimizedPathCb(const nav_msgs::Path &msg)
 
         sMatrix4 delta=inverse(lastKFPoseKF)*currKPoseKF;
         currentPose=lastKFPose*delta;
-        //currentPose=delta*lastKFPose;
     }
-    //Got less optimized poses than key frames
-    //Assumes that optimized poses are the first key frames
-    else if(msgPosesSize<keyFramesSize)
-    {
-        ROS_ERROR("Got %d optimized poses but %d is expected.",msgPosesSize,keyFramesSize);
+    //The last optimized pose is older than the current key frame
+    else
+    { 
+        ROS_WARN("Got %d optimized poses but %d is expected.",msgPosesSize,keyFramesSize+1);        
+        //kfp is the corresponding pose of kfusion to the last optimized pose
+        sMatrix4 kfp=fusion->getKeyFramePose(msgPosesSize-1);
         sMatrix4 optPose;
         for(int i=0;i<msgPosesSize;i++)
         {
-            geometry_msgs::Pose optPoseRos=msg.poses[i].pose;
-            optPose=homoFromRosPose(optPoseRos);
+            geometry_msgs::Pose poseRos=msg.poses[i].pose;
+            optPose=homoFromRosPose(poseRos);
             
             optPose(0,3)+=params.volume_direction.x;
             optPose(1,3)+=params.volume_direction.y;
-            optPose(2,3)+=params.volume_direction.z;
-            
-            
-            sMatrix4 prevPose=fusion->getKeyFramePose(i);
-            sMatrix4 delta = inverse(optPose)*prevPose;
-            std::cout<<prevPose<<std::endl;
-            std::cout<<optPose<<std::endl;
-            std::cout<<delta<<std::endl;            
+            optPose(2,3)+=params.volume_direction.z;                
             
             fusion->setKeyFramePose(i,optPose);
         }
-        
-        sMatrix4 delta;
-        if(msgPosesSize<fusion->keyFramesNum())
-        {        
-            sMatrix4 kfp=fusion->getKeyFramePose(msgPosesSize);        
-            delta=optPose * inverse(kfp ) ;
+                    
+        sMatrix4 delta=optPose * inverse(kfp);
 
-            std::cout<<"KFP"<<std::endl;
-            std::cout<<kfp<<std::endl;
-            std::cout<<delta<<std::endl;
-
-            for(int i=msgPosesSize;i<fusion->keyFramesNum();i++)
-            {
-                sMatrix4 prevPose=fusion->getKeyFramePose(i);
-                sMatrix4 newPose=delta*prevPose;
-
-                sMatrix4 deltaP=inverse(prevPose)*newPose;
-                std::cout<<deltaP<<std::endl;
-                fusion->setKeyFramePose(i,newPose);
-            }
-        }
-        else
+        for(int i=msgPosesSize;i<keyFramesSize;i++)
         {
-            sMatrix4 kfp=fusion->getLastKFPose();     
-            delta=optPose * inverse(kfp ) ;
-
-            std::cout<<"KFP"<<std::endl;
-            //std::cout<<kfp<<std::endl;
-            //std::cout<<delta<<std::endl;
-        }
-
-        sMatrix4 currentPoseKF=fusion->getPose();        
-        sMatrix4 lastKFPoseKF=fusion->getLastKFPose();
-
-        currentPose=delta*currentPoseKF;
+            sMatrix4 prevPose=fusion->getKeyFramePose(i);
+            sMatrix4 newPose=delta*prevPose;
+            fusion->setKeyFramePose(i,newPose);
+        }    
+        
         lastKFPose=delta*fusion->getLastKFPose();
-
-        sMatrix4 deltaKFP=inverse(lastKFPoseKF)*lastKFPose;
-        sMatrix4 deltaCurrP=inverse(currentPoseKF)*currentPose;
-
-         std::cout<<currentPose<<std::endl;
-         std::cout<<lastKFPose<<std::endl;
-
-        std::cout<<deltaKFP<<std::endl;
-        std::cout<<deltaCurrP<<std::endl;
-    }
-    else
-    {
-        ROS_ERROR("Got %d optimized poses but %d is expected.",msgPosesSize,keyFramesSize);
-    }
+        currentPose=delta*fusion->getPose();
+    }    
 
 #ifdef SAVE_VOXELS_TO_FILE
         Volume vol=fusion->getVolume();
@@ -360,39 +316,6 @@ void optimizedPathCb(const nav_msgs::Path &msg)
         saveVoxelsToFile(buf,vol);
 #endif 
 
-/*
-    geometry_msgs::Pose lastPose=msg.poses.back().pose;
-    sMatrix4 lastPoseMat=homoFromRosPose(lastPose);
-    
-    lastPoseMat(0,3)+=params.volume_direction.x;
-    lastPoseMat(1,3)+=params.volume_direction.y;
-    lastPoseMat(2,3)+=params.volume_direction.z;
-    
-    sMatrix4 lastKFpose=fusion->getLastKFPose();
-    sMatrix4 kfpose=fusion->getPose();
-    
-    sMatrix4 delta=inverse(lastKFpose)*kfpose;
-    sMatrix4 newKfPose=lastPoseMat*delta;
-
-#ifdef SAVE_VOXELS_TO_FILE
-        Volume vol=fusion->getVolume();
-        char buf[64];
-        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-        saveVoxelsToFile(buf,vol);
-#endif        
-
-        ROS_INFO("Fusing volumes");
-        fusion->fuseVolumes();            
-        fusion->fuseLastKeyFrame(lastPoseMat);
-        fusion->setPose(newKfPose);
-        
-        
-#ifdef SAVE_VOXELS_TO_FILE            
-        vol=fusion->getVolume();            
-        sprintf(buf,"/tmp/voxels/f%d_voxels",frame+1);
-        saveVoxelsToFile(buf,vol);
-#endif 
- */   
 }
 
 void publishVolumeProjection()
