@@ -76,7 +76,6 @@ class KFusion
         
         sMatrix4 getKeyFramePose(int idx) const
         {
-            std::cout<<"F:"<<volumes[idx].frame<<std::endl;
             return volumes[idx].pose;
         }
         

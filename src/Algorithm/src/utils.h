@@ -52,7 +52,7 @@ inline int printCUDAError()
 {
     cudaError_t error = cudaGetLastError();
     if (error)
-        std::cout <<"[CUDA ERR]"<<cudaGetErrorString(error) << std::endl;
+        std::cerr <<"[CUDA ERR]"<<cudaGetErrorString(error) << std::endl;
     return error;
 }
 

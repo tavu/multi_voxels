@@ -129,7 +129,7 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
 {
     _frame++;
     lastFrame=frame_id;
-    std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
+    //std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
     _tracked=tracking(frame_id);
@@ -294,6 +294,14 @@ bool KFusion::initKeyFrame(uint frame)
         uint size=v.resolution.x*v.resolution.y*v.resolution.z;
         
         v.data=new short2[size];
+        v.color=new float3[size];
+
+        if(v.data==nullptr || v.color==nullptr)
+        {
+            std::cerr<<"Error allocating memory."<<std::endl;
+            exit(1);
+        }
+
         cudaMemcpy(v.data, keyFrameVol.getDataPtr(),size*sizeof(short2),cudaMemcpyDeviceToHost);
         
         v.color=new float3[size];
@@ -331,9 +339,8 @@ bool KFusion::fuseVolumes()
                                                 inverse(v.pose),
                                                 params.volume_direction,
                                                 maxweight);
+        printCUDAError(); 
     }
-    
-  
     
     //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
     
@@ -342,6 +349,7 @@ bool KFusion::fuseVolumes()
 
 bool KFusion::fuseLastKeyFrame(sMatrix4 &pose)
 {
+     std::cout<<"Fusing last volume"<<std::endl;
     dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
     initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));    
     lastKeyFramePose=pose;
@@ -350,7 +358,7 @@ bool KFusion::fuseLastKeyFrame(sMatrix4 &pose)
                                             inverse(lastKeyFramePose),
                                             params.volume_direction,
                                             maxweight);  
-
+    printCUDAError();
     return true;
 }
 
