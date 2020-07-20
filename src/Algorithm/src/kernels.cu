@@ -171,8 +171,8 @@ __global__ void fuseVolumesKernel(Volume dstVol,
         pos.z+=origin.z;
         
         if( pos.x<0 || pos.x >= vsize.x ||
-            pos.y<0 || pos.x >= vsize.y ||
-            pos.z<0 || pos.x >= vsize.z)
+            pos.y<0 || pos.y >= vsize.y ||
+            pos.z<0 || pos.z >= vsize.z)
         {
              continue;
         }
