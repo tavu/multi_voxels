@@ -2,10 +2,16 @@
 #define VOLUME_H
 
 #include"cutil_math.h"
-//#include"utils.h"
 #include"kparams.h"
 #include<iostream>
 #include"sMatrix.h"
+
+#include"tsdfvh/voxel.h"
+
+//for short x
+//x * 0.00003051944088f
+//data[p] = make_short2(d.x * 32766.0f, d.y);
+
 
 struct VolumeCpu
 {
@@ -109,114 +115,159 @@ class Volume
             return dim;
         }
 
-        __host__ __device__ __forceinline__ uint getIdx(const uint3 &pos) const
+        //Get Voxel
+        __device__ __forceinline__
+        tsdfvh::Voxel getVoxel(int x, int y, int z) const
         {
-            return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
+            uint idx=getIdx(x,y,z);
+            return voxels[idx];
         }
 
-        __host__ __device__ __forceinline__ uint getIdx(const int3 &pos) const
+        //IDX
+        __host__ __device__ __forceinline__
+        uint getIdx(int x, int y, int z) const
         {
-            return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
+            return x + y * _resolution.x + z * _resolution.x * _resolution.y;
+        }
+
+
+        __host__ __device__ __forceinline__
+        uint getIdx(const uint3 &pos) const
+        {
+            return getIdx(pos.x, pos.y, pos.z);
+            //return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
+        }
+
+        __host__ __device__ __forceinline__
+        uint getIdx(const int3 &pos) const
+        {
+            return getIdx(pos.x, pos.y, pos.z);
+            //return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
+        }
+
+
+        //Get SDF data
+        __device__
+        float2 getData(int x, int y, int z) const
+        {
+            uint idx=getIdx(x, y, z);
+            const short2 d = data[idx];
+            float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
+
+            return ret;
         }
 
         __device__
         float2 operator[](const int3 & pos) const
         {
-            const short2 d = data[getIdx(pos)];
-            return make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
+            return getData(pos.x,pos.y,pos.z);
         }
 
         __device__
         float2 operator[](const uint3 & pos) const
         {
-            uint p=pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
-            const short2 d = data[p];
-            return make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
-        }
-
-        __device__
-        float3 getColor(const int3 & pos) const
-        {
-            return color[getIdx(pos)];
-        }
-
-        __device__
-        float3 getColor(const uint3 & pos) const
-        {
-            uint p=pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
-            return color[p];
+            return getData(pos.x,pos.y,pos.z);
         }
 
         __device__
         float vs(const int3 & pos) const
         {
-            return data[getIdx(pos)].x;
+            return getData(pos.x, pos.y, pos.z).x;
         }
-        
+
         __device__
         float vw(const int3 & pos) const
         {
-            return data[getIdx(pos)].y;
+            return getData(pos.x, pos.y, pos.z).y;
         }
-        
+
+
         __device__
         float vww(const int3 & pos) const
         {
-            short w=data[getIdx(pos)].y;
+            short w=getData(pos.x, pos.y, pos.z).y;
             if(w>0)
                 return 1.0;
             return 0.0;
         }
 
+
+        //Get Color data
+        __device__
+        float3 getColor(int x, int y, int z) const
+        {
+            uint idx=getIdx(x, y, z);
+            return color[idx];
+        }
+
+        __device__
+        float3 getColor(const int3 & pos) const
+        {
+            return getColor(pos.x, pos.y, pos.z);
+        }
+
+        __device__
+        float3 getColor(const uint3 & pos) const
+        {
+            return getColor(pos.x, pos.y, pos.z);
+        }       
+
+
         __device__
         float red(const int3 & pos) const
         {
-            return color[getIdx(pos)].x;
+            return getColor(pos.x, pos.y, pos.z).x;
         }
 
         __device__
         float green(const int3 & pos) const
         {
-            return color[getIdx(pos)].y;
+            return getColor(pos.x, pos.y, pos.z).y;
         }
 
         __device__
         float blue(const int3 & pos) const
         {
-            //return color[pos.x + pos.y * _size.x + pos.z * _size.x * _size.y].z;
-            return color[getIdx(pos)].z;
+            return getColor(pos.x, pos.y, pos.z).z;
+        }
+
+        //Set Data
+        __device__
+        void set(int x, int y, int z, const float2 &d, const float3 &c)
+        {
+            uint idx=getIdx(x,y,z);
+            data[idx] = make_short2(d.x * 32766.0f, d.y);
+            color[idx] = c;
+
+            voxels[idx].color=c;
+            voxels[idx].sdf=d.x;
+            voxels[idx].weight=d.y;
         }
 
         __device__
         void set(const int3 & pos, const float2 & d)
         {
-            size_t idx=getIdx(pos);
-            data[idx] = make_short2(d.x * 32766.0f, d.y);
-            color[idx] = make_float3(0.0,0.0,0.0);
+            float3 c=make_float3(0.0,0.0,0.0);
+            set(pos.x, pos.y, pos.z, d, c);
         }
 
         __device__
         void set(const uint3 & pos, const float2 & d)
         {
-            uint p=pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
-            data[p] = make_short2(d.x * 32766.0f, d.y);
-            color[p] = make_float3(0.0,0.0,0.0);
+            float3 c=make_float3(0.0,0.0,0.0);
+            set(pos.x, pos.y, pos.z, d, c);
         }
 
         __device__
         void set(const int3 & pos, const float2 &d,const float3 &c)
         {
-            size_t p=getIdx(pos);
-            data[p] = make_short2(d.x * 32766.0f, d.y);
-            color[p] = c;
+            set(pos.x, pos.y, pos.z, d, c);
         }
 
         __device__
         void set(const uint3 & pos, const float2 &d,const float3 &c)
         {
-            uint p=pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
-            data[p] = make_short2(d.x * 32766.0f, d.y);
-            color[p] = c;
+            set(pos.x, pos.y, pos.z, d, c);
         }
 
 
@@ -284,6 +335,7 @@ class Volume
             size_t s=_resolution.x * _resolution.y * _resolution.z;
             cudaMemcpy(data,other.data, s*sizeof(short2),cudaMemcpyDeviceToDevice);
             cudaMemcpy(color,other.color,s*sizeof(float3),cudaMemcpyDeviceToDevice);
+            cudaMemcpy(voxels,other.color,s*sizeof(tsdfvh::Voxel),cudaMemcpyDeviceToDevice);
         }
 
         void init(uint3 resolution, float3 dimensions)
@@ -295,6 +347,8 @@ class Volume
             
             cudaMalloc((void**)&data, size*sizeof(short2));
             cudaMalloc((void**)&color, size*sizeof(float3));
+            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
+
             
             cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
             cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
@@ -343,13 +397,17 @@ class Volume
             if(color!=nullptr)
                 cudaFree(color);
 
+            if(voxels!=nullptr)
+                cudaFree(voxels);
+
             data=nullptr;
             color=nullptr;
+            voxels=nullptr;
         }
 
     private:
-//        typedef float (Volume::*Fptr)(const uint3&) const;
 
+        tsdfvh::Voxel *voxels;
         uint3 _resolution;
         float3 dim;
         float3 voxelSize;

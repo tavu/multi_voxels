@@ -180,7 +180,15 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
     
     
     if(publish_points && frame % publish_points_rate ==0)
-         publishPoints();    
+         publishPoints();
+
+    if(frame==3 && false)
+    {
+        char buf[256];
+        Volume vol=fusion->getVolume();
+        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+        saveVoxelsToFile(buf,vol);
+    }
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
