@@ -52,7 +52,6 @@
 
 #define PUB_VOLUME_TOPIC "/multi_voxels/volume_rendered"
 #define PUB_ODOM_TOPIC "/multi_voxels/odom"
-#define PUB_POINTS_TOPIC "/multi_voxels/pointCloud"
 #define OPT_PATH_TOPIC "/odom/path"
 
 #define DEPTH_FRAME "camera_rgb_optical_frame"
@@ -79,11 +78,8 @@ uchar3 *volumeRender;
 
 //other params
 bool publish_volume=true;
-bool publish_points=true;
 bool publish_key_frame=true;
-bool publish_key_points = true;
 
-int publish_points_rate;
 int key_frame_thr;
 int keypt_size;
 
@@ -91,7 +87,6 @@ int keypt_size;
 ros::Publisher volume_pub;
 ros::Publisher odom_pub;
 ros::Publisher odom_path_pub;
-ros::Publisher points_pub;
 ros::Publisher key_frame_pub;
 ros::Publisher harris_pub;
 ros::Publisher pcl_pub0, pcl_pub1;
@@ -107,7 +102,6 @@ std::string depth_frame,vo_frame,base_link_frame,odom_frame;
 void publishVolumeProjection();
 void publishOdom();
 void publishOdomPath(geometry_msgs::Pose &p);
-void publishPoints();
 sMatrix4 homoFromRosPose(const geometry_msgs::Pose &p);
 
 
@@ -177,10 +171,6 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
     {
         publishVolumeProjection();
     }
-    
-    
-    if(publish_points && frame % publish_points_rate ==0)
-         publishPoints();
 
     if(frame==30 && false)
     {
@@ -404,31 +394,6 @@ void publishOdomPath(geometry_msgs::Pose &p)
     odom_path_pub.publish(newPath);
 }
 
-void publishPoints()
-{
-    std::vector<float3> vertices;
-    fusion->getVertices(vertices);
-    
-    sensor_msgs::PointCloud pcloud;
-    pcloud.header.stamp = ros::Time::now();
-    pcloud.header.frame_id = odom_frame;
-    pcloud.points.reserve(vertices.size());
-    sensor_msgs::ChannelFloat32 ch;    
-    
-    for(int i=0;i<vertices.size();i++)
-    {
-        geometry_msgs::Point32 p;
-        p.x=vertices[i].x;
-        p.y=vertices[i].y;
-        p.z=vertices[i].z;
-
-        pcloud.points.push_back(p);
-        ch.values.push_back(1);    
-    }
-    pcloud.channels.push_back(ch);
-    points_pub.publish(pcloud);
-}
-
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "multi_voxels_node",ros::init_options::AnonymousName);
@@ -461,18 +426,12 @@ int main(int argc, char **argv)
         drop_kf_topic=std::string(DROP_KF_TOPIC);
     }
     
-
     n_p.param("publish_volume",publish_volume,true);    
-    n_p.param("publish_points",publish_points,false);
-    n_p.param("publish_points_rate",publish_points_rate, PUBLISH_POINT_RATE);        
 
     ROS_INFO("Depth Frame:%s",depth_frame.c_str());      
     
     if(publish_volume)
-        volume_pub = n_p.advertise<sensor_msgs::Image>(PUB_VOLUME_TOPIC, 1000);
-
-    if(publish_points)
-        points_pub = n_p.advertise<sensor_msgs::PointCloud>(PUB_POINTS_TOPIC, 100);
+        volume_pub = n_p.advertise<sensor_msgs::Image>(PUB_VOLUME_TOPIC, 1000);   
 
 
     odom_pub = n_p.advertise<nav_msgs::Odometry>(PUB_ODOM_TOPIC, 50);

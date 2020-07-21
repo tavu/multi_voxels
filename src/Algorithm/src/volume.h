@@ -295,7 +295,7 @@ class Volume
         float interp(const float3 & pos) const
         {
             const Fptr fp = &Volume::vs;
-            return generic_interp(pos,fp) * 0.00003051944088f;
+            return generic_interp(pos,fp) ;
         }
         
         __device__
