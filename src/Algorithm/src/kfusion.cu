@@ -18,7 +18,10 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     _tracked(false),
     _frame(-1),
     lastKeyFrame(0),
-    lastFrame(0)
+    lastFrame(0),
+    volume(par),
+    keyFrameVol(par),
+    fusionVol(par)
 {
     uint3 vr = make_uint3(params.volume_resolution.x,
                           params.volume_resolution.y,
@@ -28,9 +31,9 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
                             params.volume_size.y,
                             params.volume_size.z);
 
-    volume.init(vr,vd);
-    keyFrameVol.init(vr,vd);
-    fusionVol.init(vr,vd);
+//    volume.init(vr,vd);
+//    keyFrameVol.init(vr,vd);
+//    fusionVol.init(vr,vd);
 
     pose = initPose;
     oldPose=pose;
@@ -286,10 +289,8 @@ bool KFusion::initKeyFrame(uint frame)
         VolumeCpu v;
         v.frame=lastKeyFrameIdx;
         v.pose=lastKeyFramePose;
-        v.resolution=keyFrameVol.getResolution();
-        v.dimensions=keyFrameVol.getDimensions();
         
-        uint size=v.resolution.x*v.resolution.y*v.resolution.z;
+        uint size=params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z;
         
         v.voxels=new tsdfvh::Voxel[size];
         if(v.voxels==nullptr)
@@ -369,8 +370,8 @@ void KFusion::saveVolumes(char *dir)
 {
     char filename[512];
     
-    Volume volTmp;        
-    volTmp.init(params.volume_resolution,params.volume_size);
+    Volume volTmp(params);
+//    volTmp.init(params.volume_resolution,params.volume_size);
     
     for(int i=0;i<volumes.size();i++)
     {

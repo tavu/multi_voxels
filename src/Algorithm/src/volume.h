@@ -6,6 +6,8 @@
 #include<iostream>
 #include"sMatrix.h"
 
+#include"kparams.h"
+
 #include"tsdfvh/voxel.h"
 
 //for short x
@@ -28,13 +30,21 @@ class Volume
 {
     private:
         typedef float (Volume::*Fptr)(const int3&) const;
-
+        const kparams_t &params;
     public:
-        Volume()
+        Volume(const kparams_t &par)
+            :params(par)
         {
-            _resolution = make_uint3(0);
-            dim = make_float3(1);
+            _resolution = params.volume_resolution;
+            dim = params.volume_size;
             voxels = nullptr;
+
+
+            uint size=_resolution.x * _resolution.y * _resolution.z;
+            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
+            voxelSize=dim/_resolution;
+            _offset=make_int3(0,0,0);
+
         }
 
         bool isNull() const
@@ -341,16 +351,16 @@ class Volume
 
         void init(uint3 resolution, float3 dimensions)
         {
-            _resolution = resolution;
-            dim = dimensions;
+//            _resolution = resolution;
+//            dim = dimensions;
             
-            uint size=_resolution.x * _resolution.y * _resolution.z;
+//            uint size=_resolution.x * _resolution.y * _resolution.z;
             
-            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
+//            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
 
-            voxelSize=dim/_resolution;
+//            voxelSize=dim/_resolution;
 
-            _offset=make_int3(0,0,0);
+//            _offset=make_int3(0,0,0);
         }
         
         void initDataFromCpu(VolumeCpu volCpu)

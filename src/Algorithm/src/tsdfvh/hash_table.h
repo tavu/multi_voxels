@@ -8,14 +8,16 @@
 #include "tsdfvh/voxel.h"
 #include "tsdfvh/voxel_block.h"
 
-namespace tsdfvh {
+namespace tsdfvh
+{
 
 /**
  * @brief      Class for handling the hash table. It takes care of allocating
  *             and deleting voxel blocks and handles the hash entries. The
  *             unit used for coordinates is a voxel block.
  */
-class HashTable {
+class HashTable
+{
  public:
   /**
    * @brief      Initializes the members of the class and allocates the memory

@@ -4,9 +4,9 @@
 __forceinline__ __device__
 float Volume::generic_interp(const float3 & pos,const Fptr fp) const
 {
-    const float3 scaled_pos = make_float3((pos.x * _resolution.x / dim.x) - 0.5f,
-                                          (pos.y * _resolution.y / dim.y) - 0.5f,
-                                          (pos.z * _resolution.z / dim.z) - 0.5f);
+    const float3 scaled_pos = make_float3((pos.x * getResolution().x / getDimensions().x) - 0.5f,
+                                          (pos.y * getResolution().y / getDimensions().y) - 0.5f,
+                                          (pos.z * getResolution().z / getDimensions().z) - 0.5f);
 //    const float3 scaled_pos = make_float3( (pos.x /voxelSize.x) - 0.5f ,
 //                                          (pos.y /voxelSize.y) - 0.5f ,
 //                                          (pos.z /voxelSize.z) - 0.5f );
@@ -32,9 +32,9 @@ float Volume::generic_interp(const float3 & pos,const Fptr fp) const
 __forceinline__ __device__
 float3 Volume::grad(const float3 & pos) const
 {
-    const float3 scaled_pos = make_float3((pos.x * _resolution.x / dim.x) - 0.5f,
-                                          (pos.y * _resolution.y / dim.y) - 0.5f,
-                                          (pos.z * _resolution.z / dim.z) - 0.5f);
+    const float3 scaled_pos = make_float3((pos.x * getResolution().x / getDimensions().x) - 0.5f,
+                                          (pos.y * getResolution().y / getDimensions().y) - 0.5f,
+                                          (pos.z * getResolution().z / getDimensions().z) - 0.5f);
     const int3 base = make_int3(floorf(scaled_pos));
     const float3 factor = fracf(scaled_pos);
 
@@ -161,7 +161,7 @@ float3 Volume::grad(const float3 & pos) const
                        * factor.x) * factor.y) * factor.z;
 
     return gradient
-            * make_float3(dim.x / _resolution.x, dim.y / _resolution.y, dim.z / _resolution.z)
+            * make_float3(voxelSize.x, voxelSize.y, voxelSize.z)
             * (0.5f * 0.00003051944088f);
 }
 
