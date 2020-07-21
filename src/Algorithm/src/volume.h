@@ -99,20 +99,10 @@ class Volume
             _offset.z+=off.z;
         }
 
-//        __host__ __device__ short2*  getDataPtr() const
-//        {
-//            return data;
-//        }
-
         __host__ __device__ tsdfvh::Voxel*  getVoxelsPtr() const
         {
             return voxels;
         }
-        
-//        __host__ __device__ float3*  getColorPtr() const
-//        {
-//            return color;
-//        }
 
         __host__ __device__ float3 getDimensions() const
         {
@@ -127,13 +117,19 @@ class Volume
             return voxels[idx];
         }
 
+        __device__ __forceinline__
+        void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
+        {
+            uint idx=getIdx(x,y,z);
+            voxels[idx]=v;
+        }
+
         //IDX
         __host__ __device__ __forceinline__
         uint getIdx(int x, int y, int z) const
         {
             return x + y * _resolution.x + z * _resolution.x * _resolution.y;
         }
-
 
         __host__ __device__ __forceinline__
         uint getIdx(const uint3 &pos) const
@@ -152,9 +148,7 @@ class Volume
         __device__
         float2 getData(int x, int y, int z) const
         {
-            uint idx=getIdx(x, y, z);
-
-            tsdfvh::Voxel v=voxels[idx];
+            tsdfvh::Voxel v=getVoxel(x, y, z);
             float2 ret=make_float2(v.sdf,
                                   v.weight);
 
@@ -202,7 +196,7 @@ class Volume
         {
             uint idx=getIdx(x, y, z);
             //return color[idx];
-            tsdfvh::Voxel v=voxels[idx];
+            tsdfvh::Voxel v=getVoxel(x, y, z);
             return v.color;
         }
 
@@ -241,11 +235,16 @@ class Volume
         __device__
         void set(int x, int y, int z, const float2 &d, const float3 &c)
         {
-            uint idx=getIdx(x,y,z);
+            tsdfvh::Voxel v;
+            v.color=c;
+            v.sdf=d.x;
+            v.weight=d.y;
+            setVoxel(v, x, y, z);
+//            uint idx=getIdx(x,y,z);
 
-            voxels[idx].color=c;
-            voxels[idx].sdf=d.x;
-            voxels[idx].weight=d.y;
+//            voxels[idx].color=c;
+//            voxels[idx].sdf=d.x;
+//            voxels[idx].weight=d.y;
         }
 
         __device__
