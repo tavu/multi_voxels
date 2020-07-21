@@ -59,30 +59,31 @@ void saveVoxelsToFile(char *fileName,const Volume volume)
     dimensions[1]=float(volume.getResolution().y);
     dimensions[2]=float(volume.getResolution().z);
 
-    outFile<<dimensions[0]<<std::endl;
-    outFile<<dimensions[1]<<std::endl;
-    outFile<<dimensions[2]<<std::endl;
+    outFile<<dimensions[0]<<"\n";
+    outFile<<dimensions[1]<<"\n";
+    outFile<<dimensions[2]<<"\n";
 
     float origin[3];
     origin[0]=0.0;
     origin[1]=0.0;
     origin[2]=0.0;
 
-    outFile<<origin[0]<<std::endl;
-    outFile<<origin[1]<<std::endl;
-    outFile<<origin[2]<<std::endl;
+    outFile<<origin[0]<<"\n";
+    outFile<<origin[1]<<"\n";
+    outFile<<origin[2]<<"\n";
 
     //assuming cubical voxels
-    float vox_size=volume.getVoxelSize().x;
-    //float vox_size=float(params.volume_size.x)/float(params.volume_resolution.x);
-    outFile<<vox_size<<std::endl;
-    //outFile<<params.mu<<std::endl;
+    float vox_size=volume.getVoxelSize().x;    
+    outFile<<vox_size<<std::endl;    
 
-    short2 *voxel_grid_cpu=new short2[volume.getResolution().x*volume.getResolution().y*volume.getResolution().z];
+    //short2 *voxel_grid_cpu=new short2[volume.getResolution().x*volume.getResolution().y*volume.getResolution().z];
 
-    cudaMemcpy(voxel_grid_cpu, volume.getDataPtr(),
-                   volume.getResolution().x*volume.getResolution().y*volume.getResolution().z* sizeof(short2),
-                   cudaMemcpyDeviceToHost);
+    uint size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z;
+    tsdfvh::Voxel *voxel_grid_cpu=new tsdfvh::Voxel[size];
+
+    cudaMemcpy(voxel_grid_cpu, volume.getVoxelsPtr(),
+               size * sizeof(tsdfvh::Voxel ),
+               cudaMemcpyDeviceToHost);
 
     //for(int i=0;i<params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z;i++)
 
@@ -93,10 +94,12 @@ void saveVoxelsToFile(char *fileName,const Volume volume)
         {
             for(pos.z=0;pos.z<volume.getResolution().z;pos.z++)
             {
-                uint arrayPos=volume.getIdx(pos);
-                short2 data=voxel_grid_cpu[arrayPos];
-                float value=float(data.x)/32766.0f;
-                outFile<<value<<'\n';
+                uint idx=volume.getIdx(pos);
+                //short2 data=voxel_grid_cpu[arrayPos];
+                //float value=float(data.x)/32766.0f;
+
+
+                outFile<<voxel_grid_cpu[idx].sdf<<'\n';
             }
         }
     }

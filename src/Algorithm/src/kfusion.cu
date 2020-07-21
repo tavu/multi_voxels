@@ -171,11 +171,9 @@ void KFusion::dropKeyFrame(int val)
     {    
         if(it->frame == val)
         {
-            short2 *data=it->data;
-            float3 *color=it->color;
+            tsdfvh::Voxel *v=it->voxels;
             volumes.erase(it); 
-            delete[] data;
-            delete[] color;
+            delete[] v;
             return;
         }
     }
@@ -293,20 +291,14 @@ bool KFusion::initKeyFrame(uint frame)
         
         uint size=v.resolution.x*v.resolution.y*v.resolution.z;
         
-        v.data=new short2[size];
-        v.color=new float3[size];
-
-        if(v.data==nullptr || v.color==nullptr)
+        v.voxels=new tsdfvh::Voxel[size];
+        if(v.voxels==nullptr)
         {
             std::cerr<<"Error allocating memory."<<std::endl;
             exit(1);
         }
 
-        cudaMemcpy(v.data, keyFrameVol.getDataPtr(),size*sizeof(short2),cudaMemcpyDeviceToHost);
-        
-        v.color=new float3[size];
-        cudaMemcpy(v.color, keyFrameVol.getColorPtr(),size*sizeof(float3),cudaMemcpyDeviceToHost);
-
+        keyFrameVol.getCpuData(v);
         volumes.push_back(v);
     }
     
@@ -368,8 +360,7 @@ void KFusion::clearKeyFramesData()
     {
         VolumeCpu &v=volumes[i];
         
-        delete[] v.data;
-        delete[] v.color;
+        delete[] v.voxels;
     }
     volumes.clear();
 }
@@ -498,26 +489,6 @@ Image<TrackData, Host> KFusion::getTrackData()
     cudaMemcpy(trackData.data(), reduction.data(),reduction.size.x*reduction.size.y*sizeof(TrackData),cudaMemcpyDeviceToHost);
 
     return trackData;
-}
-
-void KFusion::getVertices(std::vector<float3> &vertices)
-{
-    vertices.clear();
-    short2 *hostData = (short2 *) malloc(volume.getResolution().x * volume.getResolution().y * volume.getResolution().z * sizeof(short2));
-
-    if (cudaMemcpy(hostData,
-                   volume.getDataPtr(),
-                   volume.getResolution().x *
-                   volume.getResolution().y *
-                   volume.getResolution().z *
-                   sizeof(short2),
-                   cudaMemcpyDeviceToHost) != cudaSuccess)
-    {
-        std::cerr << "Error reading volumetric representation data from the GPU. "<< std::endl;
-        exit(1);
-    }
-    generateTriangles(vertices, volume, hostData);
-    free(hostData);
 }
 
 void KFusion::getImageProjection(sMatrix4 p, uchar3 *out)

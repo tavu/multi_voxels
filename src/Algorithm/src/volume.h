@@ -10,8 +10,9 @@
 
 //for short x
 //x * 0.00003051944088f
+//float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
 //data[p] = make_short2(d.x * 32766.0f, d.y);
-
+//float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
 
 struct VolumeCpu
 {
@@ -20,8 +21,7 @@ struct VolumeCpu
     uint3 resolution;
     float3 dimensions;
 
-    short2 *data;
-    float3 *color;
+    tsdfvh::Voxel *voxels;
 };
 
 class Volume
@@ -34,13 +34,12 @@ class Volume
         {
             _resolution = make_uint3(0);
             dim = make_float3(1);
-            data = nullptr;
-            color = nullptr;
+            voxels = nullptr;
         }
 
         bool isNull() const
         {
-            return data == nullptr;
+            return voxels == nullptr;
         }
 
         __host__ __device__ uint3 getResolution() const
@@ -100,15 +99,20 @@ class Volume
             _offset.z+=off.z;
         }
 
-        __host__ __device__ short2*  getDataPtr() const
+//        __host__ __device__ short2*  getDataPtr() const
+//        {
+//            return data;
+//        }
+
+        __host__ __device__ tsdfvh::Voxel*  getVoxelsPtr() const
         {
-            return data;
+            return voxels;
         }
         
-        __host__ __device__ float3*  getColorPtr() const
-        {
-            return color;
-        }
+//        __host__ __device__ float3*  getColorPtr() const
+//        {
+//            return color;
+//        }
 
         __host__ __device__ float3 getDimensions() const
         {
@@ -135,14 +139,12 @@ class Volume
         uint getIdx(const uint3 &pos) const
         {
             return getIdx(pos.x, pos.y, pos.z);
-            //return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
         }
 
         __host__ __device__ __forceinline__
         uint getIdx(const int3 &pos) const
         {
             return getIdx(pos.x, pos.y, pos.z);
-            //return pos.x + pos.y * _resolution.x + pos.z * _resolution.x * _resolution.y;
         }
 
 
@@ -151,8 +153,10 @@ class Volume
         float2 getData(int x, int y, int z) const
         {
             uint idx=getIdx(x, y, z);
-            const short2 d = data[idx];
-            float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
+
+            tsdfvh::Voxel v=voxels[idx];
+            float2 ret=make_float2(v.sdf,
+                                  v.weight);
 
             return ret;
         }
@@ -197,7 +201,9 @@ class Volume
         float3 getColor(int x, int y, int z) const
         {
             uint idx=getIdx(x, y, z);
-            return color[idx];
+            //return color[idx];
+            tsdfvh::Voxel v=voxels[idx];
+            return v.color;
         }
 
         __device__
@@ -236,8 +242,6 @@ class Volume
         void set(int x, int y, int z, const float2 &d, const float3 &c)
         {
             uint idx=getIdx(x,y,z);
-            data[idx] = make_short2(d.x * 32766.0f, d.y);
-            color[idx] = c;
 
             voxels[idx].color=c;
             voxels[idx].sdf=d.x;
@@ -333,9 +337,7 @@ class Volume
         void updateData(const Volume &other)
         {
             size_t s=_resolution.x * _resolution.y * _resolution.z;
-            cudaMemcpy(data,other.data, s*sizeof(short2),cudaMemcpyDeviceToDevice);
-            cudaMemcpy(color,other.color,s*sizeof(float3),cudaMemcpyDeviceToDevice);
-            cudaMemcpy(voxels,other.color,s*sizeof(tsdfvh::Voxel),cudaMemcpyDeviceToDevice);
+            cudaMemcpy(voxels,other.voxels,s*sizeof(tsdfvh::Voxel),cudaMemcpyDeviceToDevice);
         }
 
         void init(uint3 resolution, float3 dimensions)
@@ -345,13 +347,7 @@ class Volume
             
             uint size=_resolution.x * _resolution.y * _resolution.z;
             
-            cudaMalloc((void**)&data, size*sizeof(short2));
-            cudaMalloc((void**)&color, size*sizeof(float3));
             cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
-
-            
-            cudaMemset(data, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(short2));
-            cudaMemset(color, 0, _resolution.x * _resolution.y * _resolution.z * sizeof(float3));
 
             voxelSize=dim/_resolution;
 
@@ -360,9 +356,14 @@ class Volume
         
         void initDataFromCpu(VolumeCpu volCpu)
         {
+            uint size=_resolution.x * _resolution.y * _resolution.z;            
+            cudaMemcpy(voxels, volCpu.voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyHostToDevice);
+        }
+
+        void getCpuData(VolumeCpu &v)
+        {
             uint size=_resolution.x * _resolution.y * _resolution.z;
-            cudaMemcpy(data, volCpu.data,size*sizeof(short2),cudaMemcpyHostToDevice);        
-            cudaMemcpy(color, volCpu.color,size*sizeof(float3),cudaMemcpyHostToDevice);
+            cudaMemcpy(v.voxels, voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyDeviceToHost);
         }
         
         __host__ __device__ __forceinline__ 
@@ -392,17 +393,8 @@ class Volume
 
         void release()
         {
-            if(data!=nullptr)
-                cudaFree(data);
-            if(color!=nullptr)
-                cudaFree(color);
-
             if(voxels!=nullptr)
                 cudaFree(voxels);
-
-            data=nullptr;
-            color=nullptr;
-            voxels=nullptr;
         }
 
     private:
@@ -412,10 +404,6 @@ class Volume
         float3 dim;
         float3 voxelSize;
         int3 _offset;
-
-        short2 *data;
-        float3 *color;
-
 
 };
 

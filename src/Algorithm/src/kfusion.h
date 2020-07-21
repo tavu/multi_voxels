@@ -34,7 +34,6 @@ class KFusion
         void renderDepth(uchar3 * out);
         void renderDepthFromVertex(uchar3 * out);
 
-        void getVertices(std::vector<float3> &vertices);
         sMatrix4 getPose() const
         {
             return pose;
