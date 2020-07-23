@@ -351,7 +351,7 @@ bool KFusion::fuseLastKeyFrame(sMatrix4 &pose)
 {
      std::cout<<"Fusing last volume"<<std::endl;
     dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
-    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));    
+//    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
     lastKeyFramePose=pose;
     fuseVolumesKernel<<<grid, imageBlock>>>(volume,
                                             keyFrameVol,
