@@ -11,8 +11,6 @@
 struct out_data
 {
     char c[6];
-//    float value;
-//    char c;
 };
 
 void generateTriangles(std::vector<float3>& triangles,  const Volume volume, short2 *hostData)

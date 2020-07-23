@@ -46,7 +46,12 @@ extern bool print_kernel_timing;
 extern struct timespec tick_clockData;
 extern struct timespec tock_clockData;
 
-#include"device_code.h"
+//#include"device_code.h"
+
+__forceinline__ __host__ __device__ float sq(const float x)
+{
+    return x * x;
+}
 
 inline int printCUDAError()
 {

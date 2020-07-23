@@ -128,7 +128,7 @@ __global__ void raycastKernel(Image<float3> pos3D,
         float3 surfNorm = volume.grad(make_float3(hit));
         if (length(surfNorm) == 0)
         {
-            normal[pos].x = INVALID;            
+            normal[pos].x = INVALID;
         }
         else
         {
@@ -142,70 +142,70 @@ __global__ void raycastKernel(Image<float3> pos3D,
     }
 }
 
-__global__ void fuseVolumesKernel(Volume dstVol, 
-                                  Volume srcVol, 
+__global__ void fuseVolumesKernel(Volume dstVol,
+                                  Volume srcVol,
                                   const sMatrix4 pose,
                                   const float3 origin,
                                   const float maxweight)
 {
     uint3 pix = make_uint3(thr2pos2());
-    
+
     if( pix.x >= dstVol.getResolution().x ||
         pix.y >= dstVol.getResolution().y )
     {
         return;
     }
-    
-    float3 vsize=srcVol.getSizeInMeters();    
-    
-    
-    
+
+    float3 vsize=srcVol.getSizeInMeters();
+
+
+
     for (pix.z = 0; pix.z < dstVol.getResolution().z; pix.z++)
-    {   
+    {
         float3 pos=dstVol.pos(pix);
-        
+
         pos=pose*pos;
-        
+
         pos.x+=origin.x;
         pos.y+=origin.y;
         pos.z+=origin.z;
-        
+
         if( pos.x<0 || pos.x >= vsize.x ||
             pos.y<0 || pos.y >= vsize.y ||
             pos.z<0 || pos.z >= vsize.z)
         {
              continue;
         }
-        
+
         float tsdf=srcVol.interp(pos);
-                
+
         float3 fcol=srcVol.rgb_interp(pos);
         //float w_interp=srcVol.ww_interp(pos);
         float w_interp=1;
-        
+
 //         if(w_interp < 1.0)
 //         {
 //             continue;
 //         }
-        
+
         float2 p_data = dstVol[pix];
         float3 p_color = dstVol.getColor(pix);
-        
+
         if(tsdf == 1.0)
             continue;
-        
+
         float w=p_data.y;
         float new_w=w+w_interp;
-                
+
         fcol.x = (w*p_color.x + w_interp*fcol.x ) / new_w;
         fcol.y = (w*p_color.y + w_interp*fcol.y ) / new_w;
         fcol.z = (w*p_color.z + w_interp*fcol.z ) / new_w;
-            
+
         p_data.x = clamp( (w*p_data.x + w_interp*tsdf) / new_w, -1.f, 1.f);
-        p_data.y=fminf(new_w, maxweight);                
-        
+        p_data.y=fminf(new_w, maxweight);
+
         dstVol.set(pix,p_data, fcol);
-        
+
     }
 }
 
@@ -274,6 +274,9 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             //p_data.y=p_data.y+1;
             p_data.y=fminf(new_w, maxweight);
             vol.set(pix,p_data, fcol);
+
+            float2 p_data_n = vol[pix];
+            //printf("v:%f %f %f %f\n",p_data.x,p_data.y,p_data_n.x,p_data_n.y);
         }
     }
 }
@@ -319,7 +322,7 @@ __global__ void deIntegrateKernel(Volume vol,
 
             float3 fcol;
             float w=fmin(p_data.y,maxweight);
-            float new_w=w-1;            
+            float new_w=w-1;
             //if w is 0 restore initial contitions
             if(new_w==0)
             {
@@ -329,21 +332,21 @@ __global__ void deIntegrateKernel(Volume vol,
             }
             else
             {
-#ifdef USE_LAB                
+#ifdef USE_LAB
                 fcol=rgb2lab(rgb[px]);
 #else
                 fcol = make_float3(rgb[px].x,rgb[px].y,rgb[px].z);
 #endif
                 float3 p_color = vol.getColor(pix);
-                
+
                 float w=fmin(p_data.y,maxweight);
-                
-                
+
+
                 p_data.x = clamp( (w * p_data.x - sdf) / new_w,-1.f,1.f);
                 fcol.x = (w * p_color.x - fcol.x ) / new_w;
                 fcol.y = (w * p_color.y - fcol.y ) / new_w;
                 fcol.z = (w * p_color.z - fcol.z ) / new_w;
-            
+
                 /*
                 frgb.x=clamp(frgb.x,MIN_L,MAX_L);
                 frgb.y=clamp(frgb.y,MIN_A,MAX_A);
@@ -479,7 +482,7 @@ __global__ void renderRgbKernel(Image<uchar3> render,
         {
             float3 fcol = volume.rgb_interp(vertex);
 
-#ifdef USE_LAB              
+#ifdef USE_LAB
             fcol.x=clamp(flab.x,MIN_L,MAX_L);
             fcol.y=clamp(flab.y,MIN_A,MAX_A);
             fcol.z=clamp(flab.z,MIN_B,MAX_B);
@@ -728,11 +731,11 @@ __global__ void icpCovarianceFirstTerm( const Image<float3> inVertex,
         outData.el()=ret;
         return;
     }
-        
-    
+
+
     const uint2 pixel = thr2pos2();
     const float3 projectedVertex = Ttrack * inVertex[pixel];
-    const float3 projectedPos = view * projectedVertex;    
+    const float3 projectedPos = view * projectedVertex;
     const float2 projPixel = make_float2(projectedPos.x / projectedPos.z + 0.5f,
                                          projectedPos.y / projectedPos.z + 0.5f);
 
@@ -781,7 +784,7 @@ __global__ void icpCovarianceFirstTerm( const Image<float3> inVertex,
     float nix=fn.x;
     float niy=fn.y;
     float niz=fn.z;
-    
+
     if (niz!=niz)
     {
         outData.el()=ret;
@@ -790,13 +793,13 @@ __global__ void icpCovarianceFirstTerm( const Image<float3> inVertex,
     /***********************************************************************
 
 d2J_dX2 -- X is the [R|T] in the form of [x, y, z, a, b, c]
-x, y, z is the translation part 
+x, y, z is the translation part
 a, b, c is the rotation part in Euler format
 [x, y, z, a, b, c] is acquired from the Transformation Matrix returned by ICP.
 
 Now d2J_dX2 is a 6x6 matrix of the form
 
-ret(0,0)                   
+ret(0,0)
 ret(1,0)    ret(1,1)
 ret(2,0)    ret(2,1)    ret(2,2)
 ret(3,0)    ret(3,1)    ret(3,2)   ret(3,3)
@@ -815,7 +818,7 @@ ret(5,0)    ret(5,1)    ret(5,2)   ret(5,3)   ret(5,4)   ret(5,5)
     d2J_dxdb,    d2J_dydb,    d2J_dzdb,   d2J_dadb,   d2J_db2,      d2J_dcdb,
     d2J_dxdc,    d2J_dydc,    d2J_dzdc,   d2J_dadc,   d2J_dbdc,     d2J_dc2;
     */
-    
+
     // These terms are generated from the provided Matlab scipts. We just have to copy
     // the expressions from the matlab output with two very simple changes.
     // The first one being the the sqaure of a number 'a' is shown as a^2 in matlab,
@@ -983,9 +986,9 @@ ret(5,0)    ret(5,1)    ret(5,2)   ret(5,3)   ret(5,4)   ret(5,5)
 
             (niy*(piz*(sin(a)*sin(c) + cos(a)*cos(c)*sin(b)) - piy*(cos(c)*sin(a) - cos(a)*sin(b)*sin(c)) + pix*cos(a)*cos(b)) - nix*(piy*(cos(a)*cos(c) + sin(a)*sin(b)*sin(c)) - piz*(cos(a)*sin(c) - cos(c)*sin(a)*sin(b)) + pix*cos(b)*sin(a)))*(2*nix*(piy*(sin(a)*sin(c) + cos(a)*cos(c)*sin(b)) + piz*(cos(c)*sin(a) - cos(a)*sin(b)*sin(c))) - 2*niy*(piy*(cos(a)*sin(c) - cos(c)*sin(a)*sin(b)) + piz*(cos(a)*cos(c) + sin(a)*sin(b)*sin(c))) + 2*niz*(piy*cos(b)*cos(c) - piz*cos(b)*sin(c))) + (2*nix*(piy*(cos(a)*sin(c) - cos(c)*sin(a)*sin(b)) + piz*(cos(a)*cos(c) + sin(a)*sin(b)*sin(c))) + 2*niy*(piy*(sin(a)*sin(c) + cos(a)*cos(c)*sin(b)) + piz*(cos(c)*sin(a) - cos(a)*sin(b)*sin(c))))*(nix*(x - qix - piy*(cos(c)*sin(a) - cos(a)*sin(b)*sin(c)) + piz*(sin(a)*sin(c) + cos(a)*cos(c)*sin(b)) + pix*cos(a)*cos(b)) + niy*(y - qiy + piy*(cos(a)*cos(c) + sin(a)*sin(b)*sin(c)) - piz*(cos(a)*sin(c) - cos(c)*sin(a)*sin(b)) + pix*cos(b)*sin(a)) + niz*(z - qiz - pix*sin(b) + piz*cos(b)*cos(c) + piy*cos(b)*sin(c)));
 
-    
-     
-    outData.el()=ret;    
+
+
+    outData.el()=ret;
 }
 
 
@@ -1016,10 +1019,10 @@ __global__ void icpCovarianceSecondTerm( const Image<float3> inVertex,
     float  x, y, z, a, b, c;
     x = Tx; y = Ty; z = Tz;
     a = yaw; b = pitch; c = roll;
-        
+
     sMatrix6 d2J_dZdX_temp,mat;
     const uint2 pixel = thr2pos2();
-        
+
     if(trackData[pixel].result!=1)
     {
         for(int i=0;i<36;i++)
@@ -1354,7 +1357,7 @@ __global__ void point2PointCovFirstTerm(const float3 *vert,
     */
     int sourceIdx=sourceCorr[idx];
     int targetIdx=targetCorr[idx];
-    
+
     if(sourceIdx<0 || sourceIdx>=vertSize)
     {
         for(int i=0;i<36;i++)
@@ -1362,7 +1365,7 @@ __global__ void point2PointCovFirstTerm(const float3 *vert,
         outData[idx]=ret;
         return;
     }
-    
+
     if(targetIdx<0 || targetIdx>=prevVertSize )
     {
         for(int i=0;i<36;i++)
@@ -1371,7 +1374,7 @@ __global__ void point2PointCovFirstTerm(const float3 *vert,
         outData[idx]=ret;
         return;
     }
-    
+
     /*
     float3 fp=vert[sourceIdx];
     float3 fq=prevVert[targetIdx];
@@ -1389,7 +1392,7 @@ __global__ void point2PointCovFirstTerm(const float3 *vert,
     float qiz=fq.z;
 
 
-    
+
     /*
     d2J_dx2,     d2J_dydx,	  d2J_dzdx,   d2J_dadx,   d2J_dbdx,     d2J_dcdx,
     d2J_dxdy,    d2J_dy2,	  d2J_dzdy,   d2J_dady,   d2J_dbdy,     d2J_dcdy,
@@ -1602,11 +1605,11 @@ __global__ void point2PointCovSecondTerm(const float3 *vert,
                                         sMatrix6 *outData,
                                         const float cov_big)
 {
-    
+
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     if(idx>=correspSize)
         return;
-    
+
     float Tx = delta(0,3);
     float Ty = delta(1,3);
     float  Tz = delta(2,3);
@@ -1623,7 +1626,7 @@ __global__ void point2PointCovSecondTerm(const float3 *vert,
     sMatrix6 ret;
     /*
     int2 pair=corresp[idx];
-    
+
     if(pair.x<0 || pair.x>=vertSize)
     {
         for(int i=0;i<36;i++)
@@ -1639,14 +1642,14 @@ __global__ void point2PointCovSecondTerm(const float3 *vert,
         outData[idx]=ret;
         return;
     }
-    
+
     float3 fp=vert[pair.x];
     float3 fq=prevVert[pair.y];
     */
 
     int sourceIdx=sourceCorr[idx];
     int targetIdx=targetCorr[idx];
-    
+
     if(sourceIdx<0 || sourceIdx>=vertSize)
     {
         for(int i=0;i<36;i++)
@@ -1654,7 +1657,7 @@ __global__ void point2PointCovSecondTerm(const float3 *vert,
         outData[idx]=ret;
         return;
     }
-    
+
     if(targetIdx<0 || targetIdx>=prevVertSize )
     {
         for(int i=0;i<36;i++)
@@ -1671,7 +1674,7 @@ __global__ void point2PointCovSecondTerm(const float3 *vert,
 
     float3 fq=vert[sourceIdx];
     float3 fp=prevVert[targetIdx];
-    
+
     float pix=fp.x;
     float piy=fp.y;
     float piz=fp.z;

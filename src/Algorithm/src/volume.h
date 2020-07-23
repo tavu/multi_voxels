@@ -9,12 +9,17 @@
 #include"kparams.h"
 
 #include"tsdfvh/voxel.h"
+#include"tsdfvh/hash_table.h"
+#include"tsdfvh/hash_entry.h"
+#include"tsdfvh/voxel_block.h"
 
 //for short x
 //x * 0.00003051944088f
 //float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
 //data[p] = make_short2(d.x * 32766.0f, d.y);
 //float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
+
+//#include"utils.h"
 
 struct VolumeCpu
 {
@@ -31,6 +36,8 @@ class Volume
     private:
         typedef float (Volume::*Fptr)(const int3&) const;
         const kparams_t &params;
+        int block_size;
+        int bucket_size;
     public:
         Volume(const kparams_t &par)
             :params(par)
@@ -39,12 +46,44 @@ class Volume
             dim = params.volume_size;
             voxels = nullptr;
 
-
             uint size=_resolution.x * _resolution.y * _resolution.z;
             cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
             voxelSize=dim/_resolution;
             _offset=make_int3(0,0,0);
+            block_size=params.block_size;
 
+            bucket_size=params.bucket_size;
+            hashTable.Init(params.num_buckets,
+                           params.bucket_size,
+                           params.num_blocks,
+                           params.block_size);
+        }
+
+        __host__ __device__
+        int3 blockPosition(int x, int y, int z) const
+        {
+            return make_int3(x / block_size,
+                             y / block_size,
+                             z / block_size);
+        }
+
+        __host__ __device__
+        int3 voxelPosition(int x, int y, int z) const
+        {
+          int3 position_local = make_int3(x % block_size,
+                                          y % block_size,
+                                          z % block_size);
+
+          if (position_local.x < 0)
+              position_local.x += block_size;
+
+          if (position_local.y < 0)
+              position_local.y += block_size;
+
+          if (position_local.z < 0)
+              position_local.z += block_size;
+
+          return position_local;
         }
 
         bool isNull() const
@@ -123,8 +162,29 @@ class Volume
         __device__ __forceinline__
         tsdfvh::Voxel getVoxel(int x, int y, int z) const
         {
-            uint idx=getIdx(x,y,z);
-            return voxels[idx];
+            int3 block_position = blockPosition(x,y,z);
+            int3 local_voxel = voxelPosition(x,y,z);
+            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
+
+            if (entry.pointer == kFreeEntry)
+            {
+                tsdfvh::Voxel voxel;
+                voxel.sdf = 0;
+                voxel.color = make_float3(0.0, 0.0, 0.0);
+                voxel.weight = 0;
+                return voxel;
+            }
+            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
+            int vidx=getIdx(local_voxel.x,
+                            local_voxel.y,
+                            local_voxel.z);
+
+            int blockIdx=getIdx(entry.position.x,
+                                entry.position.y,
+                                entry.position.z);
+            int fidx=blockIdx*block_size+vidx;
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(fidx);
+            return voxel;
         }
 
         __device__ __forceinline__
@@ -132,6 +192,43 @@ class Volume
         {
             uint idx=getIdx(x,y,z);
             voxels[idx]=v;
+
+            int3 block_position = blockPosition(x,y,z);
+
+            int status=-1;
+            int count=0;
+            do
+            {
+                status=hashTable.AllocateBlock(block_position);
+                count++;
+            }while(status==-1 && count<bucket_size);
+
+            if(status<0)
+            {
+                printf("Error allocating block\n");
+                return ;
+            }
+
+            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
+
+            if(entry.pointer<0)
+            {
+                printf("Error finding block\n");
+                return ;
+            }
+            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
+            int blockIdx=getIdx(entry.position.x,
+                                entry.position.y,
+                                entry.position.z);
+
+            int3 local_voxel = voxelPosition(x,y,z);
+            int vidx=getIdx(local_voxel.x,
+                            local_voxel.y,
+                            local_voxel.z);
+
+            int fidx=blockIdx*block_size+vidx;
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(fidx);
+            voxel=v;
         }
 
         //IDX
@@ -204,8 +301,6 @@ class Volume
         __device__
         float3 getColor(int x, int y, int z) const
         {
-            uint idx=getIdx(x, y, z);
-            //return color[idx];
             tsdfvh::Voxel v=getVoxel(x, y, z);
             return v.color;
         }
@@ -250,11 +345,6 @@ class Volume
             v.sdf=d.x;
             v.weight=d.y;
             setVoxel(v, x, y, z);
-//            uint idx=getIdx(x,y,z);
-
-//            voxels[idx].color=c;
-//            voxels[idx].sdf=d.x;
-//            voxels[idx].weight=d.y;
         }
 
         __device__
@@ -413,6 +503,8 @@ class Volume
         float3 dim;
         float3 voxelSize;
         int3 _offset;
+
+        tsdfvh::HashTable hashTable;
 
 };
 

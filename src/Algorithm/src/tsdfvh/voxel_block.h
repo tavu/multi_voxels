@@ -35,8 +35,8 @@ class VoxelBlock
         *
         * @return     The voxel at the 3D position.
         */
-        __host__ __device__
-        Voxel &at(int3 position) 
+        __device__
+        Voxel &at(int3 position) const
         {
             return voxels_[position.x * block_size_ * block_size_ + position.y * block_size_ + position.z];
         }
@@ -49,7 +49,7 @@ class VoxelBlock
         * @return     The voxel at the index.
         */
         __host__ __device__
-        Voxel &at(int idx) 
+        Voxel &at(int idx) const
         {
             return voxels_[idx];
         }

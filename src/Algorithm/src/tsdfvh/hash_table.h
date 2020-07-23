@@ -1,5 +1,5 @@
-// Copyright 2019 Emanuele Palazzolo (emanuele.palazzolo@uni-bonn.de), Cyrill Stachniss, University of Bonn
-#pragma once
+#ifndef HASH_TABLE_H
+#define HASH_TABLE_H
 
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -63,21 +63,22 @@ class HashTable
    *
    * @return     The hash entry corresponding to the position.
    */
-  __host__ __device__ HashEntry FindHashEntry(int3 position);
+  __host__ __device__ __forceinline__
+  HashEntry FindHashEntry(int3 position) const;
 
   /**
    * @brief      Returns the number of allocated blocks.
    *
    * @return     The number of allocated blocks.
    */
-  int GetNumAllocatedBlocks();
+  __forceinline__ int GetNumAllocatedBlocks();
 
   /**
    * @brief      Gets the number of entries.
    *
    * @return     The number of entries.
    */
-  __host__ __device__ int GetNumEntries();
+  __host__ __device__ __forceinline__ int GetNumEntries();
 
   /**
    * @brief      Gets the hash entry at the given index.
@@ -86,7 +87,19 @@ class HashTable
    *
    * @return     The hash entry.
    */
-  __host__ __device__ HashEntry GetHashEntry(int i);
+  __host__ __device__ __forceinline__ HashEntry GetHashEntry(int i);
+
+  __device__
+  inline const VoxelBlock& GetVoxelBlock(const HashEntry &entry) const
+  {
+      return voxel_blocks_[entry.pointer];
+  }
+
+  __device__
+  inline Voxel& GetVoxel(int idx) const
+  {
+      return voxels_[idx];
+  }
 
  protected:
   /**
@@ -96,7 +109,7 @@ class HashTable
    *
    * @return     The hash value.
    */
-  __host__ __device__ int Hash(int3 position);
+  __host__ __device__ int Hash(int3 position) const;
 
   /** Entries of the hash table */
   HashEntry *entries_;
@@ -130,3 +143,7 @@ class HashTable
 };
 
 }  // namespace tsdfvh
+
+#include"hash_table_impl.h"
+
+#endif //HASH_TABLE_H

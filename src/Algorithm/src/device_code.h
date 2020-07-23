@@ -28,10 +28,10 @@ __forceinline__ __host__ __device__ void  swapf(float &f1,float &f2)
 }
 
 
-__forceinline__ __host__ __device__ float sq(const float x)
-{
-    return x * x;
-}
+//__forceinline__ __host__ __device__ float sq(const float x)
+//{
+//    return x * x;
+//}
 
 
 __device__ __forceinline__ float4 raycast(const Volume volume,

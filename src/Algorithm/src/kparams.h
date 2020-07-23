@@ -38,6 +38,12 @@ typedef struct
     float rfitness=0.6;
     float rerror=1e5;
 
+    //for hashing
+    int num_buckets = 50000;
+    int bucket_size = 10;
+    int num_blocks = 500000;
+    int block_size = 8;
+
 } kparams_t;
 
 
