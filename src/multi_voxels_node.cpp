@@ -27,15 +27,11 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-// #include<fusionHandler.h>
-// #include<kfusion.h>
+#include<fusionHandler.h>
 #include<kparams.h>
-#include<kfusion.h>
 #include<volume.h>
 
 #include<defs.h>
-
-// #include <opencv2/core/core.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
@@ -67,7 +63,7 @@ typedef unsigned char uchar;
 
 
 kparams_t params;
-KFusion *fusion=nullptr;
+FusionHandler *fusion=nullptr;
 int frame = -1;
 
 //Buffers
@@ -172,13 +168,13 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         publishVolumeProjection();
     }
 
-    if(frame==30 && false)
-    {
-        char buf[256];
-        Volume vol=fusion->getVolume();
-        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-        saveVoxelsToFile(buf,vol);
-    }
+//    if(frame==30 && false)
+//    {
+//        char buf[256];
+//        Volume vol=fusion->getVolume();
+//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+//        saveVoxelsToFile(buf,vol);
+//    }
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
@@ -211,7 +207,7 @@ void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
         volumeRender = new uchar3[params.computationSize.x * params.computationSize.y];    
     else
         volumeRender=nullptr;
-    fusion=new KFusion(params,poseMatrix);
+    fusion=new FusionHandler(params,poseMatrix);
 }
 
 void dropKeyFrameCb(const std_msgs::Int32 &msg)

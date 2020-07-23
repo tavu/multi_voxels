@@ -1,7 +1,7 @@
 #ifndef KERNELS_CALLS_H
 #define KERNELS_CALLS_H
 
-#include"utils.h"
+#include<utils.h>
 #include"kparams.h"
 #include<vector>
 sMatrix6 calculatePoint2PointCov(const std::vector<float3> &vert,

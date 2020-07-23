@@ -12,7 +12,6 @@ find_package(catkin REQUIRED COMPONENTS
     tf2
     tf2_ros
     cv_bridge
-#     g2o_slam
 )
 
 catkin_package(CATKIN_DEPENDS 
@@ -26,7 +25,8 @@ catkin_package(CATKIN_DEPENDS
 
 include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/include 
-    ${CMAKE_CURRENT_LIST_DIR}/src/Algorithm/src
+#     ${CMAKE_CURRENT_LIST_DIR}/src/Algorithm/src
+    ${CMAKE_CURRENT_LIST_DIR}/src/Algorithm/include
     ${catkin_INCLUDE_DIRS}
     ${CMAKE_CURRENT_LIST_DIR}/src    
     ${CATKIN_GLOBAL_INCLUDE_DESTINATION}

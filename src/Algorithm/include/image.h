@@ -11,7 +11,7 @@ inline __device__ uint2 thr2pos2()
     return make_uint2( __umul24(blockDim.x, blockIdx.x) + threadIdx.x,
                        __umul24(blockDim.y, blockIdx.y) + threadIdx.y);
 #else
-    return make_uint2(0);
+    return make_uint2(0,0);
 #endif
 }
 
@@ -24,7 +24,12 @@ inline __device__ uint thr2pos()
 #endif
 }
 
-
+struct TrackData
+{
+    int result;
+    float error;
+    float J[6];
+};
 
 
 
@@ -188,15 +193,6 @@ struct Image: public Allocator
         {
             return Image<T>(size, Allocator::data);
         }
-
-//        template<typename A1>
-//        Image<T, Allocator> & operator=(const Image<T, A1> & other)
-//        {
-//            std::cout<<"IMAGE COPY"<<std::endl;
-//            image_copy(*this, other, size.x * size.y * sizeof(T));
-
-//            return *this;
-//        }
 
         T * data()
         {

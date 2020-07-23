@@ -7,90 +7,19 @@
 #include <unistd.h>
 #include"volume.h"
 
+#include"kfusion.h"
 
 FusionHandler::FusionHandler(const kparams_t &p,sMatrix4 initPose)
-    :params(p),
-     _frame(-1) 
+    :params(p)
 {
     _fusion = new KFusion(params,initPose);
-    _fusion->initKeyFrame(0);
 }
 
-
-bool FusionHandler::preprocess(uint16_t *depth,uchar3 *rgb)
+bool FusionHandler::processFrame(int _frame, const float *inputDepth, const uchar3 *rgb, bool isKeyFrame)
 {
-    _fusion->preprocessing(depth,rgb);
-    return true;
+    _fusion->processFrame(_frame,inputDepth,rgb,isKeyFrame);
 }
 
-bool FusionHandler::preprocess(float *depth,uchar3 *rgb)
-{
-    _fusion->preprocessing(depth,rgb);
-    return true;
-}
-
-
-bool FusionHandler::processFrame()
-{
-    _frame++;
-    std::cout<<"[FRAME="<<_frame<<"]"<<std::endl;
-
-    tracked=_fusion->tracking(_frame);
-    bool integrated=_fusion->integration(_frame);
-
-    if(!tracked)
-    {
-        std::cerr<<"[FRAME="<<_frame<<"] Tracking faild!"<<std::endl;
-    }
-    if(!integrated)
-    {
-        std::cerr<<"[FRAME="<<_frame<<"] Integration faild!"<<std::endl;        
-    }
-    else
-    {
-        _fusion->integrateKeyFrameData();
-    }
-
-    if(_frame>0 && (_frame % KEY_FRAME_THR)==0)
-    {
-        _fusion->initKeyFrame(_frame);
-
-#ifdef MAX_KEY_FRAMES        
-        if(_fusion->keyFramesNum()==MAX_KEY_FRAMES)
-        {
-
-#ifdef SAVE_VOXELS_TO_FILE
-            Volume vol=_fusion->getVolume();
-            char buf[64];
-            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame);
-            saveVoxelsToFile(buf,vol);
-#endif //SAVE_VOXELS_TO_FILE       
-            
-            _fusion->fuseVolumes();            
-            
-#ifdef SAVE_VOXELS_TO_FILE            
-            vol=_fusion->getVolume();            
-            sprintf(buf,"/tmp/voxels/f%d_voxels",_frame+1);
-            saveVoxelsToFile(buf,vol);
-#endif //SAVE_VOXELS_TO_FILE
-
-#ifdef SAVE_VOLUMES_FRAME    
-            _fusion->saveVolumes((char*)"/tmp/voxels");
-#endif //SAVE_VOLUMES_FRAME
-            _fusion->clearKeyFramesData();
-        }
-#endif  //MAX_KEY_FRAMES
-    }
-
-
-    bool raycast=_fusion->raycasting(_frame);
-    if(!raycast)
-    {
-        std::cerr<<"[FRAME="<<_frame<<"] Raycast faild!"<<std::endl;
-    }
-
-    return tracked;
-}
 
 sMatrix4 FusionHandler::getPose() const
 {
@@ -100,4 +29,54 @@ sMatrix4 FusionHandler::getPose() const
 FusionHandler::~FusionHandler()
 {
     delete _fusion;
+}
+
+int FusionHandler::keyFramesNum() const
+{
+    return _fusion->keyFramesNum();
+}
+
+void FusionHandler::dropKeyFrame(int val)
+{
+    _fusion->dropKeyFrame(val);
+}
+
+void FusionHandler::setKeyFramePose(int idx, const sMatrix4 &p)
+{
+    _fusion->setKeyFramePose(idx,p);
+}
+
+sMatrix4 FusionHandler::getLastKFPose() const
+{
+    _fusion->getLastKFPose();
+}
+
+sMatrix4 FusionHandler::getKeyFramePose(int idx) const
+{
+    _fusion->getKeyFramePose(idx);
+}
+
+bool FusionHandler::fuseVolumes()
+{
+    _fusion->fuseVolumes();
+}
+
+bool FusionHandler::fuseLastKeyFrame(sMatrix4 &pose)
+{
+    _fusion->fuseLastKeyFrame(pose);
+}
+
+bool FusionHandler::raycasting(uint frame)
+{
+    _fusion->raycasting(frame);
+}
+
+void FusionHandler::renderImage(uchar3 * out)
+{
+    _fusion->renderImage(out);
+}
+
+void FusionHandler::setPose(const sMatrix4 &pose_)
+{
+    _fusion->setPose(pose_);
 }

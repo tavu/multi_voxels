@@ -2,7 +2,7 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include "tsdfvh/voxel.h"
+#include "voxel.h"
 
 
 namespace tsdfvh 

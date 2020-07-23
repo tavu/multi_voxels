@@ -13,6 +13,8 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
     ${TOON_INCLUDE_PATHS}
     ${EIGEN_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
 set(cuda_srcs
@@ -23,19 +25,14 @@ set(cuda_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/hash_table.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/heap.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/volume.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/fusionHandler.cpp
 )
-
-# set(cpp_srcs
-# #     ${CMAKE_CURRENT_LIST_DIR}/src/volume.cpp
-# #     ${CMAKE_CURRENT_LIST_DIR}/src/fusionHandler.cpp
-# )
-
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 find_package(CUDA REQUIRED)
 set( CUDA_NVCC_FLAGS 
-    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC;-arch=sm_50;" 
+    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC;-arch=sm_50; -I${CMAKE_CURRENT_LIST_DIR}/include" 
 )
 
 cuda_add_library(multi_voxels_lib   STATIC  ${cuda_srcs}  
@@ -45,6 +42,7 @@ cuda_add_library(multi_voxels_lib   STATIC  ${cuda_srcs}
     -I${TOON_INCLUDE_PATHS}
     -I${EIGEN3_INCLUDE_DIR}
     -I${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/
+    -I${CMAKE_CURRENT_LIST_DIR}/include/
 )
 SET_TARGET_PROPERTIES(multi_voxels_lib PROPERTIES COMPILE_FLAGS "-fPIC" )
 

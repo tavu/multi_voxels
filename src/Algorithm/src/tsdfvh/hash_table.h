@@ -3,10 +3,10 @@
 
 #include <cuda_runtime.h>
 #include <stdio.h>
-#include "tsdfvh/hash_entry.h"
-#include "tsdfvh/heap.h"
-#include "tsdfvh/voxel.h"
-#include "tsdfvh/voxel_block.h"
+#include "hash_entry.h"
+#include "heap.h"
+#include "voxel.h"
+#include "voxel_block.h"
 
 namespace tsdfvh
 {

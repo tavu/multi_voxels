@@ -16,7 +16,7 @@
 #include <vector>
 
 #include <vector_types.h>
-#include "cutil_math.h"
+// #include "cutil_math.h"
 
 #include <TooN/TooN.h>
 #include <TooN/se3.h>
@@ -46,7 +46,6 @@ extern bool print_kernel_timing;
 extern struct timespec tick_clockData;
 extern struct timespec tock_clockData;
 
-//#include"device_code.h"
 
 __forceinline__ __host__ __device__ float sq(const float x)
 {
@@ -142,14 +141,8 @@ inline void image_copy(HostDevice & to, const HostDevice & from, uint size) {
     cudaMemcpy(to.data, from.data, size, cudaMemcpyHostToHost);
 }
 
-struct TrackData
-{
-    int result;
-    float error;
-    float J[6];
-};
-
-bool __forceinline__ __host__ __device__ operator==(const TrackData &d1,const TrackData &d2)
+__forceinline__ __host__ __device__
+bool  operator==(const TrackData &d1,const TrackData &d2)
 {
     return d1.result==d2.result;
 }
@@ -360,16 +353,8 @@ inline float3 toVisionCordV(const float3 &v)
 
     mat=toVisionCord(mat);
     float3 ret=mat.get_translation();
-//    float3 ret=make_float3( -v.y,-v.z,v.x);
     return ret;
 }
-
-//inline sMatrix4 toVisionCord(const sMatrix4 &mat)
-//{
-////    static sMatrix4 invT_B_P=inverse(T_B_P);
-//    return T_B_P*mat*invT_B_P;
-////    return invT_B_P*mat;
-//}
 
 inline bool isNum(bool b)
 {

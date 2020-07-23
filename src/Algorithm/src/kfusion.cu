@@ -31,10 +31,6 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
                             params.volume_size.y,
                             params.volume_size.z);
 
-//    volume.init(vr,vd);
-//    keyFrameVol.init(vr,vd);
-//    fusionVol.init(vr,vd);
-
     pose = initPose;
     oldPose=pose;
     this->iterations.clear();

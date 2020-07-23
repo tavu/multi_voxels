@@ -2,10 +2,11 @@
 #define ICS_FUSION_H
 
 #include"kparams.h"
-#include"utils.h"
+#include"sMatrix.h"
 #include"volume.h"
 #include<vector>
 #include<iostream>
+#include"image.h"
 
 class KFusion
 {
@@ -39,7 +40,7 @@ class KFusion
             return pose;
         }
 
-        void setPose(const sMatrix4 pose_)
+        void setPose(const sMatrix4 &pose_)
         {
             pose=pose_;
             forcePose=true;
@@ -122,10 +123,13 @@ class KFusion
         sMatrix4 inverseCam;
         sMatrix4 camMatrix;
         std::vector<int> iterations;
-        Volume volume;
+
         float largestep;
+
+        Volume volume;
         Volume keyFrameVol;
         Volume fusionVol;
+
         int lastKeyFrame;
         int lastFrame;
 
