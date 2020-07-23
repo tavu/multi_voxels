@@ -7,12 +7,6 @@
 #include <string>
 #include <string.h>
 
-
-struct out_data
-{
-    char c[6];
-};
-
 void generateTriangles(std::vector<float3>& triangles,  const Volume volume, short2 *hostData)
 {
     int3 min=volume.minVoxel();
@@ -45,11 +39,10 @@ void generateTriangles(std::vector<float3>& triangles,  const Volume volume, sho
     }
 }
 
-// void saveVoxelsToFile(char *fileName,const Volume volume,const kparams_t &params)
-void saveVoxelsToFile(char *fileName,
+void saveVoxelsToFile(const char *fileName,
                       const uint3 &resolution,
                       float vox_size,
-                      const tsdfvh::Voxel *voxels)
+                      const short2 *voxels)
 {    
     std::cout<<"Saving TSDF voxel grid values to disk("<<fileName<<")"<< std::endl;
 
@@ -75,15 +68,6 @@ void saveVoxelsToFile(char *fileName,
     //assuming cubical voxels   
     outFile<<vox_size<<std::endl;    
 
-    //short2 *voxel_grid_cpu=new short2[volume.getResolution().x*volume.getResolution().y*volume.getResolution().z];
-
-//    uint size=resolution.x*resolution.y*resolution.z;
-//    tsdfvh::Voxel *voxel_grid_cpu=new tsdfvh::Voxel[size];
-
-//    cudaMemcpy(voxel_grid_cpu, volume.getVoxelsPtr(),
-//               size * sizeof(tsdfvh::Voxel ),
-//               cudaMemcpyDeviceToHost);
-
     uint3 pos;
     for(pos.x=0;pos.x<resolution.x;pos.x++)
     {
@@ -92,7 +76,7 @@ void saveVoxelsToFile(char *fileName,
             for(pos.z=0;pos.z<resolution.z;pos.z++)
             {
                 uint idx=pos.x + pos.y * resolution.x + pos.z * resolution.x * resolution.y;
-                outFile<<voxels[idx].sdf<<'\n';
+                outFile<<(float)voxels[idx].x*0.00003051944088f <<'\n';
             }
         }
     }

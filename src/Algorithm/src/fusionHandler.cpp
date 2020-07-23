@@ -84,5 +84,17 @@ void FusionHandler::setPose(const sMatrix4 &pose_)
 
 void FusionHandler::saveVolume(const char *filename) const
 {
+    Volume v=_fusion->getVolume();
+    int size=params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z*sizeof(short2);
 
+    float vsize=params.volume_size.x/params.volume_resolution.x;
+
+    short2 *host_data=new short2[size];
+    _fusion->getVolumeData(host_data);    
+
+    saveVoxelsToFile(filename,params.volume_resolution,v.getVoxelSize().x,host_data);
+
+    delete []host_data;
 }
+
+

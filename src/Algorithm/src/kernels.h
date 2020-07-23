@@ -143,6 +143,7 @@ __global__ void renderVolumeKernel2(Image<uchar3> render,
                                    const float nearPlane,
                                    const float farPlane);
 
+__global__ void getVoxelData(Volume vol, short2 *output);
 
 //=================ICP COVARIANCE======================
 

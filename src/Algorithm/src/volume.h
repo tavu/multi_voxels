@@ -529,7 +529,7 @@ class Volume
 
 //Usefull functions
 void generateTriangles(std::vector<float3>& triangles,  const Volume volume, short2 *hostData);
-void saveVoxelsToFile(char *fileName, const uint3 &resolution, float vox_size, const tsdfvh::Voxel *voxels);
+void saveVoxelsToFile(const char *fileName, const uint3 &resolution, float vox_size, const short2 *voxels);
 
 
 #include"volume_impl.h"

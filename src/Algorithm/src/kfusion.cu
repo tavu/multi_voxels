@@ -128,7 +128,7 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
 {
     _frame++;
     lastFrame=frame_id;
-    //std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
+    std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
     _tracked=tracking(frame_id);
@@ -622,4 +622,15 @@ bool KFusion::checkPoseKernel(sMatrix4 & pose,
     return true;
 }
 
+void KFusion::getVolumeData(short2 *cpu_data)
+{
+    int size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z*sizeof(short2);
+    short2 *gpu_data;
+    cudaMalloc(&gpu_data, size);
 
+    dim3 grid=divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
+    getVoxelData<<<grid, imageBlock>>>(volume,gpu_data);
+
+    cudaMemcpy(cpu_data, gpu_data,size, cudaMemcpyDeviceToHost);
+    cudaFree(gpu_data);
+}

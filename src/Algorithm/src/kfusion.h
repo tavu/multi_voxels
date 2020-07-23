@@ -104,6 +104,8 @@ class KFusion
         void dropKeyFrame(int val);
         
         bool fuseLastKeyFrame(sMatrix4 &pose);
+
+        void getVolumeData(short2 *cpu_data);
         
     private:
         int _frame;

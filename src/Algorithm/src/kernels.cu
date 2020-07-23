@@ -7,6 +7,17 @@
 
 // #define USE_LAB
 
+__global__ void getVoxelData(Volume vol, short2 *output)
+{
+    uint3 pix = make_uint3(thr2pos2());
+    for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++)
+    {
+        int idx= pix.x + pix.y * vol.getResolution().x + pix.z * vol.getResolution().x * vol.getResolution().y;
+        float2 p_data = vol[pix];
+        output[idx]=make_short2(p_data.x * 32766.0f, p_data.y);
+    }
+}
+
 __global__ void renderDepthKernel(Image<uchar3> out,
                                   const Image<float> depth,
                                   const float nearPlane,

@@ -14,7 +14,7 @@
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <string.h>
-#include <kernels.h>
+//#include <kernels.h>
 
 #include <tf/LinearMath/Matrix3x3.h>
 
@@ -29,7 +29,6 @@
 
 #include<fusionHandler.h>
 #include<kparams.h>
-#include<volume.h>
 
 #include<defs.h>
 
@@ -59,8 +58,7 @@
 #define PUBLISH_POINT_RATE 10
 #define PUBLISH_IMAGE_RATE 1
 
-typedef unsigned char uchar;
-
+//typedef unsigned char uchar;
 
 kparams_t params;
 FusionHandler *fusion=nullptr;
@@ -168,13 +166,14 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         publishVolumeProjection();
     }
 
-//    if(frame==30 && false)
-//    {
-//        char buf[256];
-//        Volume vol=fusion->getVolume();
-//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-//        saveVoxelsToFile(buf,vol);
-//    }
+    /*
+    if(frame==300 )
+    {
+        char buf[256];
+        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+        fusion->saveVolume(buf);
+    }
+    */
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
@@ -293,10 +292,9 @@ void optimizedPathCb(const nav_msgs::Path &msg)
     }    
 
 #ifdef SAVE_VOXELS_TO_FILE
-        Volume vol=fusion->getVolume();
         char buf[64];
         sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-        saveVoxelsToFile(buf,vol);
+        fusion->saveVolume(buf);
 #endif    
 
     ROS_INFO("Fusing volumes");
@@ -304,10 +302,10 @@ void optimizedPathCb(const nav_msgs::Path &msg)
     fusion->fuseLastKeyFrame(lastKFPose);
     fusion->setPose(currentPose);
     fusion->raycasting(frame);
-#ifdef SAVE_VOXELS_TO_FILE            
-        vol=fusion->getVolume();            
+
+#ifdef SAVE_VOXELS_TO_FILE                    
         sprintf(buf,"/tmp/voxels/f%d_voxels",frame+1);
-        saveVoxelsToFile(buf,vol);
+        fusion->saveVolume(buf);
 #endif 
 
 }
