@@ -1,6 +1,7 @@
 #include "tsdfvh/hash_table.h"
 #include<cuda_runtime.h>
 #include <iostream>
+#include"utils.h"
 
 #define THREADS_PER_BLOCK 512
 
@@ -15,6 +16,14 @@ bool isEqual3(const HashEntry &entry, const int3 &position)
            entry.position.z == position.z;
 }
 
+__device__
+inline Voxel& HashTable::GetVoxel(const tsdfvh::HashEntry &entry, int3 vpos) const
+{
+    int vidx=vpos.x + vpos.y * block_size_ + vpos.z * block_size_ * block_size_;
+    int idx=entry.pointer*block_size_*block_size_*block_size_+vidx;
+    return voxels_[idx];
+
+}
 
 /*
 __device__ inline

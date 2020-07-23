@@ -8,6 +8,7 @@
 #include"volume.h"
 
 #include"kfusion.h"
+#include"tsdfvh/voxel.h"
 
 FusionHandler::FusionHandler(const kparams_t &p,sMatrix4 initPose)
     :params(p)
@@ -79,4 +80,9 @@ void FusionHandler::renderImage(uchar3 * out)
 void FusionHandler::setPose(const sMatrix4 &pose_)
 {
     _fusion->setPose(pose_);
+}
+
+void FusionHandler::saveVolume(const char *filename) const
+{
+
 }

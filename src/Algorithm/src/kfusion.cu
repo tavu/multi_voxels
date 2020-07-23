@@ -362,24 +362,23 @@ void KFusion::clearKeyFramesData()
     volumes.clear();
 }
 
-void KFusion::saveVolumes(char *dir)
-{
-    char filename[512];
+//void KFusion::saveVolumes(char *dir)
+//{
+//    char filename[512];
     
-    Volume volTmp(params);
-//    volTmp.init(params.volume_resolution,params.volume_size);
+//    Volume volTmp(params);
     
-    for(int i=0;i<volumes.size();i++)
-    {
-        VolumeCpu &v=volumes[i];
-        volTmp.initDataFromCpu(v);
+//    for(int i=0;i<volumes.size();i++)
+//    {
+//        VolumeCpu &v=volumes[i];
+//        volTmp.initDataFromCpu(v);
         
-        sprintf(filename,"%s/f%d_voxels",dir,v.frame);
+//        sprintf(filename,"%s/f%d_voxels",dir,v.frame);
         
-        saveVoxelsToFile(filename,volTmp);
-    }
-    volTmp.release();
-}
+//        saveVoxelsToFile(filename,volTmp);
+//    }
+//    volTmp.release();
+//}
 
 bool KFusion::raycasting(uint frame)
 {

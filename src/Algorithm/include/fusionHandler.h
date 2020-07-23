@@ -26,14 +26,11 @@ class FusionHandler
         void renderImage(uchar3 * out);
         void setPose(const sMatrix4 &pose_);
 
-
+        void saveVolume(const char *filename) const;
+        
     private:
         KFusion *_fusion;
         const kparams_t &params;
-//        int _frame;
-
-//        bool tracked;
-
 };
 
 #endif // CLOSELOOP_H

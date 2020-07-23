@@ -47,6 +47,24 @@ extern struct timespec tick_clockData;
 extern struct timespec tock_clockData;
 
 
+__host__ __device__ __forceinline__
+uint getIdx(int x, int y, int z, const uint3 &resolution)
+{
+    return x + y * resolution.x + z * resolution.x * resolution.y;
+}
+
+__host__ __device__ __forceinline__
+uint getIdx(const uint3 &pos, const uint3 &resolution)
+{
+    return getIdx(pos.x, pos.y, pos.z,resolution);
+}
+
+__host__ __device__ __forceinline__
+uint getIdx(const int3 &pos, const uint3 &resolution)
+{
+    return getIdx(pos.x, pos.y, pos.z,resolution);
+}
+
 __forceinline__ __host__ __device__ float sq(const float x)
 {
     return x * x;

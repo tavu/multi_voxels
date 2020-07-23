@@ -19,7 +19,7 @@
 //data[p] = make_short2(d.x * 32766.0f, d.y);
 //float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
 
-//#include"utils.h"
+#include"utils.h"
 
 struct VolumeCpu
 {
@@ -38,6 +38,7 @@ class Volume
         const kparams_t &params;
         int block_size;
         int bucket_size;
+
     public:
         Volume(const kparams_t &par)
             :params(par)
@@ -51,6 +52,17 @@ class Volume
             voxelSize=dim/_resolution;
             _offset=make_int3(0,0,0);
             block_size=params.block_size;
+
+            block_resolution=make_uint3(_resolution.x/block_size,
+                                        _resolution.y/block_size,
+                                        _resolution.z/block_size);
+
+            if(_resolution.x%block_size)
+                block_resolution.x++;
+            if(_resolution.y%block_size)
+                block_resolution.y++;
+            if(_resolution.z%block_size)
+                block_resolution.z++;
 
             bucket_size=params.bucket_size;
             hashTable.Init(params.num_buckets,
@@ -174,24 +186,27 @@ class Volume
                 voxel.weight = 0;
                 return voxel;
             }
-            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
-            int vidx=getIdx(local_voxel.x,
-                            local_voxel.y,
-                            local_voxel.z);
+//            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
+//            int vidx=getIdx(local_voxel.x,
+//                            local_voxel.y,
+//                            local_voxel.z,
+//                            _resolution);
 
-            int blockIdx=getIdx(entry.position.x,
-                                entry.position.y,
-                                entry.position.z);
-            int fidx=blockIdx*block_size+vidx;
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(fidx);
+//            int blockIdx=getIdx(entry.position.x,
+//                                entry.position.y,
+//                                entry.position.z,
+//                                block_resolution);
+
+//            int fidx=blockIdx*block_size+vidx;
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(entry,local_voxel);
             return voxel;
         }
 
         __device__ __forceinline__
         void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
         {
-            uint idx=getIdx(x,y,z);
-            voxels[idx]=v;
+            uint idx=getIdx(x,y,z,_resolution);
+            //voxels[idx]=v;
 
             int3 block_position = blockPosition(x,y,z);
 
@@ -216,39 +231,42 @@ class Volume
                 printf("Error finding block\n");
                 return ;
             }
-            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
-            int blockIdx=getIdx(entry.position.x,
-                                entry.position.y,
-                                entry.position.z);
+
+//            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
+//            int blockIdx=getIdx(entry.position.x,
+//                                entry.position.y,
+//                                entry.position.z,
+//                                block_resolution);
 
             int3 local_voxel = voxelPosition(x,y,z);
-            int vidx=getIdx(local_voxel.x,
-                            local_voxel.y,
-                            local_voxel.z);
+//            int vidx=getIdx(local_voxel.x,
+//                            local_voxel.y,
+//                            local_voxel.z,
+//                            _resolution);
 
-            int fidx=blockIdx*block_size+vidx;
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(fidx);
+//            int fidx=blockIdx*block_size+vidx;
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(entry,local_voxel);
             voxel=v;
         }
 
-        //IDX
-        __host__ __device__ __forceinline__
-        uint getIdx(int x, int y, int z) const
-        {
-            return x + y * _resolution.x + z * _resolution.x * _resolution.y;
-        }
+//        //IDX
+//        __host__ __device__ __forceinline__
+//        uint getIdx(int x, int y, int z) const
+//        {
+//            return x + y * _resolution.x + z * _resolution.x * _resolution.y;
+//        }
 
-        __host__ __device__ __forceinline__
-        uint getIdx(const uint3 &pos) const
-        {
-            return getIdx(pos.x, pos.y, pos.z);
-        }
+//        __host__ __device__ __forceinline__
+//        uint getIdx(const uint3 &pos) const
+//        {
+//            return getIdx(pos.x, pos.y, pos.z);
+//        }
 
-        __host__ __device__ __forceinline__
-        uint getIdx(const int3 &pos) const
-        {
-            return getIdx(pos.x, pos.y, pos.z);
-        }
+//        __host__ __device__ __forceinline__
+//        uint getIdx(const int3 &pos) const
+//        {
+//            return getIdx(pos.x, pos.y, pos.z);
+//        }
 
 
         //Get SDF data
@@ -500,6 +518,7 @@ class Volume
 
         tsdfvh::Voxel *voxels;
         uint3 _resolution;
+        uint3 block_resolution;
         float3 dim;
         float3 voxelSize;
         int3 _offset;
@@ -510,7 +529,7 @@ class Volume
 
 //Usefull functions
 void generateTriangles(std::vector<float3>& triangles,  const Volume volume, short2 *hostData);
-void saveVoxelsToFile(char *fileName,const Volume volume);
+void saveVoxelsToFile(char *fileName, const uint3 &resolution, float vox_size, const tsdfvh::Voxel *voxels);
 
 
 #include"volume_impl.h"

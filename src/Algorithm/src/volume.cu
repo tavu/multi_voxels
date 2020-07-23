@@ -46,16 +46,18 @@ void generateTriangles(std::vector<float3>& triangles,  const Volume volume, sho
 }
 
 // void saveVoxelsToFile(char *fileName,const Volume volume,const kparams_t &params)
-void saveVoxelsToFile(char *fileName,const Volume volume)
-{
-    //TODO this function needs cleanup and speedup
+void saveVoxelsToFile(char *fileName,
+                      const uint3 &resolution,
+                      float vox_size,
+                      const tsdfvh::Voxel *voxels)
+{    
     std::cout<<"Saving TSDF voxel grid values to disk("<<fileName<<")"<< std::endl;
 
     std::ofstream outFile(fileName, std::ios::out);
     float dimensions[3];
-    dimensions[0]=float(volume.getResolution().x);
-    dimensions[1]=float(volume.getResolution().y);
-    dimensions[2]=float(volume.getResolution().z);
+    dimensions[0]=float(resolution.x);
+    dimensions[1]=float(resolution.y);
+    dimensions[2]=float(resolution.z);
 
     outFile<<dimensions[0]<<"\n";
     outFile<<dimensions[1]<<"\n";
@@ -70,34 +72,27 @@ void saveVoxelsToFile(char *fileName,const Volume volume)
     outFile<<origin[1]<<"\n";
     outFile<<origin[2]<<"\n";
 
-    //assuming cubical voxels
-    float vox_size=volume.getVoxelSize().x;    
+    //assuming cubical voxels   
     outFile<<vox_size<<std::endl;    
 
     //short2 *voxel_grid_cpu=new short2[volume.getResolution().x*volume.getResolution().y*volume.getResolution().z];
 
-    uint size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z;
-    tsdfvh::Voxel *voxel_grid_cpu=new tsdfvh::Voxel[size];
+//    uint size=resolution.x*resolution.y*resolution.z;
+//    tsdfvh::Voxel *voxel_grid_cpu=new tsdfvh::Voxel[size];
 
-    cudaMemcpy(voxel_grid_cpu, volume.getVoxelsPtr(),
-               size * sizeof(tsdfvh::Voxel ),
-               cudaMemcpyDeviceToHost);
-
-    //for(int i=0;i<params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z;i++)
+//    cudaMemcpy(voxel_grid_cpu, volume.getVoxelsPtr(),
+//               size * sizeof(tsdfvh::Voxel ),
+//               cudaMemcpyDeviceToHost);
 
     uint3 pos;
-    for(pos.x=0;pos.x<volume.getResolution().x;pos.x++)
+    for(pos.x=0;pos.x<resolution.x;pos.x++)
     {
-        for(pos.y=0;pos.y<volume.getResolution().y;pos.y++)
+        for(pos.y=0;pos.y<resolution.y;pos.y++)
         {
-            for(pos.z=0;pos.z<volume.getResolution().z;pos.z++)
+            for(pos.z=0;pos.z<resolution.z;pos.z++)
             {
-                uint idx=volume.getIdx(pos);
-                //short2 data=voxel_grid_cpu[arrayPos];
-                //float value=float(data.x)/32766.0f;
-
-
-                outFile<<voxel_grid_cpu[idx].sdf<<'\n';
+                uint idx=pos.x + pos.y * resolution.x + pos.z * resolution.x * resolution.y;
+                outFile<<voxels[idx].sdf<<'\n';
             }
         }
     }
@@ -105,6 +100,5 @@ void saveVoxelsToFile(char *fileName,const Volume volume)
     outFile.close();
 
     std::cout<<"Saving done."<<std::endl;
-    delete [] voxel_grid_cpu;
 }
 

@@ -96,10 +96,7 @@ class HashTable
   }
 
   __device__
-  inline Voxel& GetVoxel(int idx) const
-  {
-      return voxels_[idx];
-  }
+  inline Voxel& GetVoxel(const tsdfvh::HashEntry &entry, int3 vpos) const;
 
  protected:
   /**
