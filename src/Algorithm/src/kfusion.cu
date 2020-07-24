@@ -38,6 +38,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     {    
         this->iterations.push_back(*it);
     }
+
     largestep=0.75*params.mu;
     inverseCam=getInverseCameraMatrix(params.camera);
     camMatrix=getCameraMatrix(params.camera);
@@ -76,8 +77,8 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
 
     printCUDAError();
     volume.init();
-//    keyFrameVol.init();
-//    fusionVol.init();
+    keyFrameVol.init();
+    fusionVol.init();
 
 //    TICK("initVolume");
 //    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
