@@ -79,7 +79,6 @@ __device__ inline
 int HashTable::AllocateBlock(const int3 &position)
 {
 #ifdef __CUDACC__
-
     int bucket_idx = Hash(position);
 
     int free_entry_idx = -1;
@@ -117,6 +116,7 @@ int HashTable::AllocateBlock(const int3 &position)
     return -1;
 }
 
+//TODO
 __device__ inline
 bool HashTable::DeleteBlock(const int3 &position)
 {
@@ -132,9 +132,9 @@ bool HashTable::DeleteBlock(const int3 &position)
             int ptr = entries_[bucket_idx + i].pointer;
             for(int j=0;j<block_size_ * block_size_ * block_size_; j++) 
             {
-                voxel_blocks_[ptr].at(j).sdf = 0;
-                voxel_blocks_[ptr].at(j).color = make_float3(0, 0, 0);
-                voxel_blocks_[ptr].at(j).weight = 0;
+//                voxel_blocks_[ptr].at(j).sdf = 0;
+//                voxel_blocks_[ptr].at(j).color = make_float3(0, 0, 0);
+//                voxel_blocks_[ptr].at(j).weight = 0;
             }
             
             heap_->Append(ptr);

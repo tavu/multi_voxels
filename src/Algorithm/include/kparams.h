@@ -40,7 +40,7 @@ typedef struct
 
     //for hashing
     int num_buckets = 50000;
-    int bucket_size = 10;
+    int bucket_size = 50;
     int num_blocks = 500000;
     int block_size = 8;
 

@@ -36,6 +36,10 @@ class HashTable
   void Free();
 
   /**
+   * @brief      Sets hash table as empty.
+   */
+  void setEmpty();
+  /**
    * @brief      Allocates a voxel block.
    *
    * @param[in]  position  The 3D position of the voxel block
@@ -90,15 +94,8 @@ class HashTable
   __host__ __device__ __forceinline__ HashEntry GetHashEntry(int i);
 
   __device__
-  inline const VoxelBlock& GetVoxelBlock(const HashEntry &entry) const
-  {
-      return voxel_blocks_[entry.pointer];
-  }
-
-  __device__
   inline Voxel& GetVoxel(const tsdfvh::HashEntry &entry, int3 vpos) const;
 
- protected:
   /**
    * @brief      Computes the hash value from a 3D position.
    *
@@ -113,9 +110,6 @@ class HashTable
 
   /** Voxels in the grid */
   Voxel *voxels_;
-
-  /** Voxel blocks in the grid */
-  VoxelBlock *voxel_blocks_;
 
   /** Object that handles the indices of the voxel blocks */
   Heap *heap_;

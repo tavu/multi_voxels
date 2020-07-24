@@ -76,7 +76,10 @@ void saveVoxelsToFile(const char *fileName,
             for(pos.z=0;pos.z<resolution.z;pos.z++)
             {
                 uint idx=pos.x + pos.y * resolution.x + pos.z * resolution.x * resolution.y;
-                outFile<<(float)voxels[idx].x*0.00003051944088f <<'\n';
+                float f=(float)voxels[idx].x*0.00003051944088f;
+                if(f>0.9)
+                    f=1.0;
+                outFile<<f<<'\n';
             }
         }
     }

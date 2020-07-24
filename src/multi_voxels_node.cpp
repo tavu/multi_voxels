@@ -166,14 +166,12 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         publishVolumeProjection();
     }
 
-    /*
     if(frame==300 )
     {
         char buf[256];
         sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
         fusion->saveVolume(buf);
     }
-    */
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)

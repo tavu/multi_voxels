@@ -45,10 +45,7 @@ class Volume
         {
             _resolution = params.volume_resolution;
             dim = params.volume_size;
-            voxels = nullptr;
 
-            uint size=_resolution.x * _resolution.y * _resolution.z;
-            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
             voxelSize=dim/_resolution;
             _offset=make_int3(0,0,0);
             block_size=params.block_size;
@@ -65,10 +62,7 @@ class Volume
                 block_resolution.z++;
 
             bucket_size=params.bucket_size;
-            hashTable.Init(params.num_buckets,
-                           params.bucket_size,
-                           params.num_blocks,
-                           params.block_size);
+
         }
 
         __host__ __device__
@@ -100,7 +94,7 @@ class Volume
 
         bool isNull() const
         {
-            return voxels == nullptr;
+            return false;
         }
 
         __host__ __device__ uint3 getResolution() const
@@ -160,10 +154,10 @@ class Volume
             _offset.z+=off.z;
         }
 
-        __host__ __device__ tsdfvh::Voxel*  getVoxelsPtr() const
-        {
-            return voxels;
-        }
+//        __host__ __device__ tsdfvh::Voxel*  getVoxelsPtr() const
+//        {
+//            return voxels;
+//        }
 
         __host__ __device__ float3 getDimensions() const
         {
@@ -181,7 +175,7 @@ class Volume
             if (entry.pointer == kFreeEntry)
             {
                 tsdfvh::Voxel voxel;
-                voxel.sdf = 0;
+                voxel.sdf = 1;
                 voxel.color = make_float3(0.0, 0.0, 0.0);
                 voxel.weight = 0;
                 return voxel;
@@ -205,7 +199,7 @@ class Volume
         __device__ __forceinline__
         void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
         {
-            uint idx=getIdx(x,y,z,_resolution);
+//            printf("setvoxel\n");
             //voxels[idx]=v;
 
             int3 block_position = blockPosition(x,y,z);
@@ -220,7 +214,7 @@ class Volume
 
             if(status<0)
             {
-                printf("Error allocating block\n");
+                printf("Error allocating block:%d\n",count);
                 return ;
             }
 
@@ -232,21 +226,10 @@ class Volume
                 return ;
             }
 
-//            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
-//            int blockIdx=getIdx(entry.position.x,
-//                                entry.position.y,
-//                                entry.position.z,
-//                                block_resolution);
-
             int3 local_voxel = voxelPosition(x,y,z);
-//            int vidx=getIdx(local_voxel.x,
-//                            local_voxel.y,
-//                            local_voxel.z,
-//                            _resolution);
-
-//            int fidx=blockIdx*block_size+vidx;
             tsdfvh::Voxel &voxel=hashTable.GetVoxel(entry,local_voxel);
             voxel=v;
+//            printf("setvoxel end\n");
         }
 
 //        //IDX
@@ -451,36 +434,30 @@ class Volume
 
         __device__ float3 grad(const float3 & pos) const;
 
-        void updateData(const Volume &other)
+        void init()
         {
-            size_t s=_resolution.x * _resolution.y * _resolution.z;
-            cudaMemcpy(voxels,other.voxels,s*sizeof(tsdfvh::Voxel),cudaMemcpyDeviceToDevice);
+            hashTable.Init(params.num_buckets,
+                           params.bucket_size,
+                           params.num_blocks,
+                           params.block_size);
+            clearData();
         }
 
-        void init(uint3 resolution, float3 dimensions)
+        void clearData()
         {
-//            _resolution = resolution;
-//            dim = dimensions;
-            
-//            uint size=_resolution.x * _resolution.y * _resolution.z;
-            
-//            cudaMalloc((void**)&voxels, size*sizeof(tsdfvh::Voxel));
-
-//            voxelSize=dim/_resolution;
-
-//            _offset=make_int3(0,0,0);
+            hashTable.setEmpty();
         }
         
         void initDataFromCpu(VolumeCpu volCpu)
         {
             uint size=_resolution.x * _resolution.y * _resolution.z;            
-            cudaMemcpy(voxels, volCpu.voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyHostToDevice);
+//            cudaMemcpy(voxels, volCpu.voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyHostToDevice);
         }
 
         void getCpuData(VolumeCpu &v)
         {
             uint size=_resolution.x * _resolution.y * _resolution.z;
-            cudaMemcpy(v.voxels, voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyDeviceToHost);
+//            cudaMemcpy(v.voxels, voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyDeviceToHost);
         }
         
         __host__ __device__ __forceinline__ 
@@ -510,13 +487,11 @@ class Volume
 
         void release()
         {
-            if(voxels!=nullptr)
-                cudaFree(voxels);
+            hashTable.Free();
         }
 
     private:
 
-        tsdfvh::Voxel *voxels;
         uint3 _resolution;
         uint3 block_resolution;
         float3 dim;

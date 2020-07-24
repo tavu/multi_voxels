@@ -17,7 +17,7 @@ class Heap
         */
         inline void Init(int heap_size)
         {
-            cudaMallocManaged(&heap_, sizeof(unsigned int) * heap_size);
+            cudaMalloc(&heap_, sizeof(unsigned int) * heap_size);
         }
 
         /**
