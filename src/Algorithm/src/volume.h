@@ -162,9 +162,45 @@ class Volume
         __host__ __device__ float3 getDimensions() const
         {
             return dim;
+        }                
+
+        //insert voxel
+        __device__ __forceinline__
+        tsdfvh::Voxel* insertVoxel(const int3 &pos, int &block_idx)
+        {
+            int3 block_position = blockPosition(pos.x,pos.y,pos.z);
+            int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
+
+            if(block_idx>0 && hashTable.entries_[block_idx].isEqual(block_position) )
+            {
+                return &hashTable.GetVoxel(block_idx,local_voxel);
+            }
+
+            block_idx=hashTable.AllocateBlock(block_position);
+            if(block_idx>0)
+                return &hashTable.GetVoxel(block_idx,local_voxel);
+            return nullptr;
         }
 
+
         //Get Voxel
+        __device__ tsdfvh::Voxel* getVoxel(const int3 &pos, int &block_idx)
+        {
+            if(block_idx<0 || !hashTable.entries_[block_idx].isEqual(pos) )
+            {
+                int3 block_position = blockPosition(pos.x,pos.y,pos.z);
+                block_idx=hashTable.FindHashEntry(block_position);
+            }
+
+            if (block_idx<0)
+            {
+                return nullptr;
+            }
+            int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
+            return &hashTable.GetVoxel(block_idx,local_voxel);
+
+        }
+
         __device__ __forceinline__
         tsdfvh::Voxel getVoxel(int x, int y, int z) const
         {
@@ -180,18 +216,6 @@ class Volume
                 voxel.weight = 0;
                 return voxel;
             }
-//            const tsdfvh::VoxelBlock &vb=hashTable.GetVoxelBlock(entry);
-//            int vidx=getIdx(local_voxel.x,
-//                            local_voxel.y,
-//                            local_voxel.z,
-//                            _resolution);
-
-//            int blockIdx=getIdx(entry.position.x,
-//                                entry.position.y,
-//                                entry.position.z,
-//                                block_resolution);
-
-//            int fidx=blockIdx*block_size+vidx;
             tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
             return voxel;
         }
@@ -199,9 +223,6 @@ class Volume
         __device__ __forceinline__
         void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
         {
-//            printf("setvoxel\n");
-            //voxels[idx]=v;
-
             int3 block_position = blockPosition(x,y,z);
 
             int block_idx=-1;
@@ -218,18 +239,9 @@ class Volume
                 return ;
             }
 
-//            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
-
-//            if(entry.isEmpty()<0)
-//            {
-//                printf("Error finding block\n");
-//                return ;
-//            }
-
             int3 local_voxel = voxelPosition(x,y,z);
             tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
             voxel=v;
-//            printf("setvoxel end\n");
         }
 
 //        //IDX
@@ -498,6 +510,8 @@ class Volume
         float3 dim;
         float3 voxelSize;
         int3 _offset;
+
+        tsdfvh::Voxel dummyVoxel;
 
         tsdfvh::HashTable hashTable;
 

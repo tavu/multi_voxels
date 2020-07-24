@@ -228,12 +228,13 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
                                 const float mu,
                                 const float maxweight)
 {
-    uint3 pix = make_uint3(thr2pos2());
+    int3 pix = make_int3(thr2pos2i());
     float3 pos = invTrack * vol.pos(pix);
     float3 cameraX = K * pos;
     const float3 delta = rotate(invTrack,make_float3(0, 0, vol.getDimensions().z / vol.getResolution().z));
     const float3 cameraDelta = rotate(K, delta);
 
+    int blockIdx=-1;
     for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++, pos += delta, cameraX +=cameraDelta)
     {
         if (pos.z < 0.0001f) // some near plane constraint
@@ -259,8 +260,17 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
         {
             const float sdf = fminf(1.f, diff / mu);
 
-            float2 p_data = vol[pix];
-            float3 p_color = vol.getColor(pix);
+            float2 p_data=make_float2(1.0,0.0);
+//            float3 p_color=make_float3(0.0, 0.0, 0.0);
+            tsdfvh::Voxel *v=vol.insertVoxel(pix,blockIdx);
+
+            if(blockIdx<0)
+                continue;
+
+            p_data.x=v->getTsdf();
+            p_data.y=v->getWeight();
+            float3 p_color = v->color;
+
 
             //float w=fmin(p_data.y,maxweight);
             float w=p_data.y;
@@ -284,9 +294,12 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             */
             //p_data.y=p_data.y+1;
             p_data.y=fminf(new_w, maxweight);
-            vol.set(pix,p_data, fcol);
+            //vol.set(pix,p_data, fcol);
 
-            float2 p_data_n = vol[pix];
+            v->setTsdf(p_data.x);
+            v->setWeight(p_data.y);
+            v->color=fcol;
+
             //printf("v:%f %f %f %f\n",p_data.x,p_data.y,p_data_n.x,p_data_n.y);
         }
     }

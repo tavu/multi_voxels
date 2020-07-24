@@ -15,6 +15,16 @@ inline __device__ uint2 thr2pos2()
 #endif
 }
 
+inline __device__ int2 thr2pos2i()
+{
+#ifdef __CUDACC__
+    return make_int2( blockDim.x*blockIdx.x + threadIdx.x,
+                      blockDim.y*blockIdx.y + threadIdx.y);
+#else
+    return make_int2(0,0);
+#endif
+}
+
 inline __device__ uint thr2pos()
 {
 #ifdef __CUDACC__
