@@ -28,20 +28,30 @@
 
 #include"sMatrix.h"
 
-
+#define PRINT_KERNEL_TIME
 
 #define INVALID -2   // this is used to mark invalid entries in normal or vertex maps
 
-#define TICK(str)    {static const std::string str_tick = str; \
-    if (print_kernel_timing) {clock_gettime(CLOCK_MONOTONIC, &tick_clockData);}
+#ifdef PRINT_KERNEL_TIME
+#define TICK(str)    \
+    { \
+        static const std::string str_tick = str; \
+        clock_gettime(CLOCK_MONOTONIC, &tick_clockData);
 
-#define TOCK()        if (print_kernel_timing) {cudaDeviceSynchronize(); \
-    clock_gettime(CLOCK_MONOTONIC, &tock_clockData); \
-    std::cerr<< str_tick << " ";\
-    if((tock_clockData.tv_sec > tick_clockData.tv_sec) && (tock_clockData.tv_nsec >= tick_clockData.tv_nsec)) std::cerr<< tock_clockData.tv_sec - tick_clockData.tv_sec << std::setfill('0') << std::setw(9);\
-    std::cerr  << (( tock_clockData.tv_nsec - tick_clockData.tv_nsec) + ((tock_clockData.tv_nsec<tick_clockData.tv_nsec)?1000000000:0)) << std::endl;}}
-
-extern bool print_kernel_timing;
+#define TOCK() \
+        cudaDeviceSynchronize(); \
+        clock_gettime(CLOCK_MONOTONIC, &tock_clockData); \
+        std::cerr<< str_tick << " ";\
+        if( (tock_clockData.tv_sec > tick_clockData.tv_sec) && \
+            (tock_clockData.tv_nsec >= tick_clockData.tv_nsec))  \
+                std::cerr<<tock_clockData.tv_sec - tick_clockData.tv_sec << std::setfill('0') << std::setw(9);\
+                std::cerr<<(( tock_clockData.tv_nsec - tick_clockData.tv_nsec) +  \
+                           ((tock_clockData.tv_nsec<tick_clockData.tv_nsec)?1000000000:0))<<std::endl; \
+    }
+#else
+    #define TICK(str)
+    #define TOCK()
+#endif
 
 extern struct timespec tick_clockData;
 extern struct timespec tock_clockData;

@@ -5,7 +5,6 @@
 
 struct timespec tick_clockData;
 struct timespec tock_clockData;
-bool print_kernel_timing = false;
 
 sMatrix4 T_B_P(0,-1,  0 ,0,
                0, 0, -1, 0,
