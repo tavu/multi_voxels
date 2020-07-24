@@ -1,6 +1,7 @@
 #ifndef VOLUME_H
 #define VOLUME_H
 
+#include"utils.h"
 #include"cutil_math.h"
 #include"kparams.h"
 #include<iostream>
@@ -11,7 +12,6 @@
 #include"tsdfvh/voxel.h"
 #include"tsdfvh/hash_table.h"
 #include"tsdfvh/hash_entry.h"
-#include"tsdfvh/voxel_block.h"
 
 //for short x
 //x * 0.00003051944088f
@@ -170,9 +170,9 @@ class Volume
         {
             int3 block_position = blockPosition(x,y,z);
             int3 local_voxel = voxelPosition(x,y,z);
-            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
+            int block_idx = hashTable.FindHashEntry(block_position);
 
-            if (entry.pointer == kFreeEntry)
+            if (block_idx<0)
             {
                 tsdfvh::Voxel voxel;
                 voxel.sdf = 1;
@@ -192,7 +192,7 @@ class Volume
 //                                block_resolution);
 
 //            int fidx=blockIdx*block_size+vidx;
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(entry,local_voxel);
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
             return voxel;
         }
 
@@ -204,30 +204,30 @@ class Volume
 
             int3 block_position = blockPosition(x,y,z);
 
-            int status=-1;
+            int block_idx=-1;
             int count=0;
             do
             {
-                status=hashTable.AllocateBlock(block_position);
+                block_idx=hashTable.AllocateBlock(block_position);
                 count++;
-            }while(status==-1 && count<bucket_size);
+            }while(block_idx==-1 && count<bucket_size);
 
-            if(status<0)
+            if(block_idx<0)
             {
                 printf("Error allocating block:%d\n",count);
                 return ;
             }
 
-            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
+//            tsdfvh::HashEntry entry = hashTable.FindHashEntry(block_position);
 
-            if(entry.pointer<0)
-            {
-                printf("Error finding block\n");
-                return ;
-            }
+//            if(entry.isEmpty()<0)
+//            {
+//                printf("Error finding block\n");
+//                return ;
+//            }
 
             int3 local_voxel = voxelPosition(x,y,z);
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(entry,local_voxel);
+            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
             voxel=v;
 //            printf("setvoxel end\n");
         }
@@ -438,9 +438,11 @@ class Volume
         {
             hashTable.Init(params.num_buckets,
                            params.bucket_size,
-                           params.num_blocks,
                            params.block_size);
             clearData();
+            printCUDAError();
+
+            printf("Init\n");
         }
 
         void clearData()

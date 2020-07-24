@@ -22,17 +22,17 @@ set(cuda_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/kfusion.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/utils.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/kernelscalls.cu
-    ${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/hash_table.cu
-    ${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/heap.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/tsdfvh/hash_table.cu    
     ${CMAKE_CURRENT_LIST_DIR}/src/volume.cu
     ${CMAKE_CURRENT_LIST_DIR}/src/fusionHandler.cpp
 )
 
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
+# -arch=sm_50;
 find_package(CUDA REQUIRED)
 set( CUDA_NVCC_FLAGS 
-    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC;-arch=sm_50; -I${CMAKE_CURRENT_LIST_DIR}/include" 
+    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC; -I${CMAKE_CURRENT_LIST_DIR}/include" 
 )
 
 cuda_add_library(multi_voxels_lib   STATIC  ${cuda_srcs}  

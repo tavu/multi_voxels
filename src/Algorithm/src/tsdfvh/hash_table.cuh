@@ -1,4 +1,5 @@
 #include "tsdfvh/hash_table.h"
+#include"tsdfvh/voxel.h"
 #include<cuda_runtime.h>
 #include <iostream>
 #include"utils.h"
@@ -8,21 +9,115 @@
 namespace tsdfvh 
 {
 
+__host__ __device__ inline
+int HashTable::GetNumEntries() {
+    return num_entries_;
+}
+
 __device__ inline
-bool isEqual3(const HashEntry &entry, const int3 &position)
+HashEntry HashTable::GetHashEntry(int i)
 {
-    return entry.position.x == position.x &&
-           entry.position.y == position.y &&
-           entry.position.z == position.z;
+    return entries_[i];
 }
 
 __device__
-inline Voxel& HashTable::GetVoxel(const tsdfvh::HashEntry &entry, int3 vpos) const
+inline Voxel& HashTable::GetVoxel(int entry_idx, int3 vpos) const
 {
     int vidx=vpos.x + vpos.y * block_size_ + vpos.z * block_size_ * block_size_;
-    int idx=entry.pointer*block_size_*block_size_*block_size_+vidx;
+    int idx=entry_idx*block_size_*block_size_*block_size_+vidx;
     return voxels_[idx];
+}
 
+
+__device__ inline
+int HashTable::AllocateBlock(const int3 &position)
+{
+#ifdef __CUDACC__
+
+    int idx = Hash(position);
+    do
+    {
+        //printf("IDX:%d",idx);
+        HashEntry &entry=entries_[idx];
+        //Block is found
+        if( entry.isEqual(position) )
+        {
+            //printf("block found.\n");
+            return idx;
+        }
+
+        //Block has a next pointer
+        if(entry.next_ptr > 0)
+        {
+            idx=entry.next_ptr;
+        }
+        else //Block is free tail or locked
+        {
+            if(entry.isTail() )
+            {
+                int mutex = atomicCAS(&entry.next_ptr, kTailEntry, kLockEntry);
+                if (mutex == kTailEntry)
+                {
+                    int next_ptr=heap_->Consume();
+
+                    entries_[next_ptr].position = position;
+                    entries_[next_ptr].next_ptr = kTailEntry;
+
+                     __threadfence();
+                    entry.next_ptr=next_ptr;
+                    return next_ptr;
+                }
+            }
+            else if(entry.isEmpty() )
+            {
+                int mutex = atomicCAS(&entry.next_ptr, kFreeEntry, kLockEntry);
+                if (mutex == kFreeEntry)
+                {
+                    entry.position = position;
+                     __threadfence();
+                    entry.next_ptr=kTailEntry;
+                    return idx;
+                }
+            }
+            /*
+            if(entry.isLocked() )
+            {
+                unsigned int ns = 8;
+                __nanosleep(ns);
+            }
+            */
+        }
+    } while(idx>0);
+
+#endif
+    return -1;
+}
+
+
+//TODO
+__device__ inline
+int HashTable::DeleteBlock(const int3 &position)
+{
+    return -1;
+}
+
+__device__ inline
+int HashTable::FindHashEntry(int3 position) const
+{
+    int idx = Hash(position);
+    do
+    {
+        HashEntry &entry=entries_[idx];
+        //Block is found
+        if( entry.isEqual(position) )
+        {
+            return idx;
+        }
+
+        idx=entry.next_ptr;
+    } while(idx>=0 );
+
+    return -1;
 }
 
 /*
@@ -72,7 +167,7 @@ int HashTable::AllocateBlock(const int3 &position)
     printf("done...\n");
     return -1;
 }
-*/
+
 
 
 __device__ inline
@@ -167,7 +262,7 @@ HashEntry HashTable::FindHashEntry(int3 position) const
     entry.pointer = kFreeEntry;
     return entry;
 }
-
+*/
 __host__ __device__ inline
 int HashTable::Hash(int3 position) const
 {
@@ -184,20 +279,10 @@ int HashTable::Hash(int3 position) const
     return result * bucket_size_;
 }
 
-inline int HashTable::GetNumAllocatedBlocks()
-{
-    return num_allocated_blocks_;
-}
+//inline int HashTable::GetNumAllocatedBlocks()
+//{
+//    return num_allocated_blocks_;
+//}
 
-__host__ __device__ inline
-int HashTable::GetNumEntries() {
-    return num_entries_;
-}
-
-__host__ __device__ inline
-HashEntry HashTable::GetHashEntry(int i)
-{
-    return entries_[i];
-}
 
 }  // namespace tsdfvh
