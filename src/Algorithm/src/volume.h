@@ -257,8 +257,7 @@ class Volume
         float2 getData(int x, int y, int z) const
         {
             tsdfvh::Voxel v=getVoxel(x, y, z);
-            float2 ret=make_float2(v.sdf,
-                                  v.weight);
+            float2 ret=make_float2(v.getTsdf(),v.getWeight());
 
             return ret;
         }
@@ -343,8 +342,8 @@ class Volume
         {
             tsdfvh::Voxel v;
             v.color=c;
-            v.sdf=d.x;
-            v.weight=d.y;
+            v.setTsdf(d.x);
+            v.setWeight(d.y);
             setVoxel(v, x, y, z);
         }
 

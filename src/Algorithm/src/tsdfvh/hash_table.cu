@@ -36,25 +36,6 @@ void HashTable::Init(int num_buckets,
 
     cudaMallocManaged(&heap_, sizeof(Heap));
     heap_->Init(heap_size_);
-
-
-
-
-//    num_buckets_ = num_buckets;
-//    bucket_size_ = bucket_size;
-//    num_entries_ = num_buckets * bucket_size;
-//    num_blocks_ = num_blocks;
-//    block_size_ = block_size;
-//    num_allocated_blocks_ = 0;
-
-//    int vsize=block_size*block_size*block_size*num_blocks;
-
-//    cudaMalloc( &entries_, sizeof(HashEntry)*num_entries_);
-//    cudaMalloc( &voxels_, sizeof(Voxel)*vsize);
-//    //TODO how to allocate size on device and store it on device pointer?
-//    cudaMallocManaged(&heap_, sizeof(Heap));
-
-//    heap_->Init(num_blocks);
 }
 
 void HashTable::setEmpty()
@@ -66,30 +47,16 @@ void HashTable::setEmpty()
 
     printf("initEntriesKernel\n");
     initEntriesKernel<<<thread_blocks, threads_per_block>>>(entries_,num_entries_);
-    cudaDeviceSynchronize();
     printCUDAError();
 
     printf("initHeapKernel\n");
     thread_blocks = (heap_size_ + threads_per_block - 1) / threads_per_block;
     initHeapKernel<<<thread_blocks, threads_per_block>>>(heap_, heap_size_,num_buckets_);
-    cudaDeviceSynchronize();
     printCUDAError();
 
     printf("initVoxelsKernel\n");
     initVoxelsKernel<<<vsize/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(voxels_,vsize);
-    cudaDeviceSynchronize();
     printCUDAError();
-
-    cudaDeviceSynchronize();
-
-    HashEntry *e=new HashEntry[num_entries_];
-    cudaMemcpy(e, entries_, sizeof(HashEntry)*num_entries_, cudaMemcpyDeviceToHost);
-
-    for(int i=0;i<num_entries_;i++)
-    {
-        printf("E:%d\n",e[i].next_ptr);
-    }
-//    exit(0);
 
 }
 

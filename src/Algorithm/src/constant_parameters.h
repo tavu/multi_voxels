@@ -30,4 +30,7 @@ const float3 light = make_float3(1, 1, -1.0);
 const float3 ambient = make_float3(0.1, 0.1, 0.1);
 
 const float PI = 3.14159265358979323846;
+
+const float short2float = 0.00003051944088f;
+const float float2short = 32766.0f;
 #endif /* CONSTANT_PARAMETERS_H_ */
