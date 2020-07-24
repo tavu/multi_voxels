@@ -171,13 +171,13 @@ class Volume
             int3 block_position = blockPosition(pos.x,pos.y,pos.z);
             int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
 
-            if(block_idx>0 && hashTable.entries_[block_idx].isEqual(block_position) )
+            if(block_idx>=0 && hashTable.entries_[block_idx].isEqual(block_position) )
             {
                 return &hashTable.GetVoxel(block_idx,local_voxel);
             }
 
             block_idx=hashTable.AllocateBlock(block_position);
-            if(block_idx>0)
+            if(block_idx>=0)
                 return &hashTable.GetVoxel(block_idx,local_voxel);
             return nullptr;
         }
