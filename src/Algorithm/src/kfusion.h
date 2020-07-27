@@ -85,8 +85,6 @@ class KFusion
         }
         
         void integrateKeyFrameData();
-        bool deIntegration(sMatrix4 p,const Host &depth,const Host &rgb);
-        bool reIntegration(sMatrix4 pose,const Host &depth,const Host &rgb);
 
         Image<TrackData, Host> getTrackData();
 

@@ -4,7 +4,7 @@
 #include "utils.h"
 #include"volume.h"
 
-__global__ void initVolume(Volume volume, const float2 val);
+//__global__ void initVolume(Volume volume, const float2 val);
 
 __global__ void integrate(Volume vol,
                           const Image<float> depth,
@@ -109,14 +109,6 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
                                 const sMatrix4 K,
                                 const float mu,
                                 const float maxweight);
-
-__global__ void deIntegrateKernel(Volume vol,
-                                  const Image<float> depth,
-                                  const Image<uchar3> rgb,
-                                  const sMatrix4 invTrack,
-                                  const sMatrix4 K,
-                                  const float mu,
-                                  const float maxweight);
 
 __global__ void compareRgbKernel(const Image<uchar3> image1,
                                  const Image<uchar3> image2,

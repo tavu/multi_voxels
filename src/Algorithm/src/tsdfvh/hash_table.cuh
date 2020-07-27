@@ -39,10 +39,8 @@ int HashTable::AllocateBlock(const int3 &position)
         //Block is found
         if( isEqual(entry,position) )
         {
-            //printf("block found.\n");
             return idx;
-        }
-
+        }        
         //Block has a next pointer
         if(entry.next_ptr >= 0)
         {
@@ -66,6 +64,7 @@ int HashTable::AllocateBlock(const int3 &position)
                     __threadfence();
                     entries_[idx].next_ptr=next_ptr;
                     __threadfence();
+
                     return next_ptr;
                 }
             }
@@ -82,9 +81,11 @@ int HashTable::AllocateBlock(const int3 &position)
                      __threadfence();
                     entries_[idx].next_ptr=kTailEntry;
                     __threadfence();
+
                     return idx;
                 }
             }
+
             /*
             if(entry.isLocked() )
             {
@@ -94,6 +95,7 @@ int HashTable::AllocateBlock(const int3 &position)
             */
         }
     } while(idx>=0);
+
 #endif
     return -1;
 }
@@ -112,7 +114,6 @@ int HashTable::FindHashEntry(int3 position) const
     int idx = Hash(position);
     do
     {
-//        volatile HashEntry &entry=entries_[idx];
         //Block is found
         if( isEqual(entries_[idx],position) )
         {
@@ -125,149 +126,6 @@ int HashTable::FindHashEntry(int3 position) const
     return -1;
 }
 
-/*
-__device__ inline
-int HashTable::AllocateBlock(const int3 &position)
-{
-#ifdef __CUDACC__
-
-    int bucket_idx = Hash(position);
-//    printf("Bucket idx:%d\n",bucket_idx);
-
-
-    int free_entry_idx = -1;
-    for (int i = 0; i < bucket_size_; i++) 
-    {
-        if (entries_[bucket_idx + i].position.x == position.x &&
-            entries_[bucket_idx + i].position.y == position.y &&
-            entries_[bucket_idx + i].position.z == position.z &&
-            entries_[bucket_idx + i].pointer != kFreeEntry) 
-        {
-            printf("block found.\n");
-            return 0;
-        }
-        
-        if (free_entry_idx == -1 &&
-            entries_[bucket_idx + i].pointer == kFreeEntry) 
-        {
-            free_entry_idx = bucket_idx + i;
-        }
-    }
-
-    if (free_entry_idx != -1) 
-    {
-        int mutex = 0;
-        mutex = atomicCAS(&entries_[free_entry_idx].pointer, kFreeEntry, kLockEntry);
-        
-        if (mutex == kFreeEntry) 
-        {
-            entries_[free_entry_idx].position = position;
-            entries_[free_entry_idx].pointer = heap_->Consume();
-            atomicAdd(&num_allocated_blocks_, 1);
-            return 1;
-        }
-    }
-
-#endif
-    printf("done...\n");
-    return -1;
-}
-
-
-
-__device__ inline
-int HashTable::AllocateBlock(const int3 &position)
-{
-#ifdef __CUDACC__
-    int bucket_idx = Hash(position);
-
-    int free_entry_idx = -1;
-    for (int i = 0; i < bucket_size_; i++)
-    {
-        if (entries_[bucket_idx + i].position.x == position.x &&
-            entries_[bucket_idx + i].position.y == position.y &&
-            entries_[bucket_idx + i].position.z == position.z &&
-            entries_[bucket_idx + i].pointer != kFreeEntry)
-        {
-            return 0;
-        }
-
-        if (free_entry_idx == -1 &&
-            entries_[bucket_idx + i].pointer == kFreeEntry)
-        {
-            free_entry_idx = bucket_idx + i;
-        }
-    }
-
-    if (free_entry_idx != -1)
-    {
-        int mutex = 0;
-        mutex = atomicCAS(&entries_[free_entry_idx].pointer, kFreeEntry, kLockEntry);
-
-        if (mutex == kFreeEntry)
-        {
-            entries_[free_entry_idx].position = position;
-            entries_[free_entry_idx].pointer = heap_->Consume();
-            //atomicAdd(&num_allocated_blocks_, 1);
-            return 1;
-        }
-    }
-#endif
-    return -1;
-}
-
-//TODO
-__device__ inline
-bool HashTable::DeleteBlock(const int3 &position)
-{
-    int bucket_idx = Hash(position);
-
-    for (int i = 0; i < bucket_size_; i++) 
-    {
-        if (entries_[bucket_idx + i].position.x == position.x &&
-            entries_[bucket_idx + i].position.y == position.y &&
-            entries_[bucket_idx + i].position.z == position.z &&
-            entries_[bucket_idx + i].pointer != kFreeEntry) 
-        {
-            int ptr = entries_[bucket_idx + i].pointer;
-            for(int j=0;j<block_size_ * block_size_ * block_size_; j++) 
-            {
-//                voxel_blocks_[ptr].at(j).sdf = 0;
-//                voxel_blocks_[ptr].at(j).color = make_float3(0, 0, 0);
-//                voxel_blocks_[ptr].at(j).weight = 0;
-            }
-            
-            heap_->Append(ptr);
-            entries_[bucket_idx + i].pointer = kFreeEntry;
-            entries_[bucket_idx + i].position = make_int3(0, 0, 0);
-            
-            return true;
-        }
-    }
-    return false;
-}
-
-__host__ __device__ inline
-HashEntry HashTable::FindHashEntry(int3 position) const
-{
-    int bucket_idx = Hash(position);
-    for (int i = 0; i < bucket_size_; i++) 
-    {
-        if (entries_[bucket_idx + i].position.x == position.x &&
-            entries_[bucket_idx + i].position.y == position.y &&
-            entries_[bucket_idx + i].position.z == position.z &&
-            entries_[bucket_idx + i].pointer != kFreeEntry) 
-        {
-            return entries_[bucket_idx + i];
-        }
-    }
-    
-    HashEntry entry;
-    entry.position = position;
-    entry.pointer = kFreeEntry;
-    return entry;
-}
-*/
 __host__ __device__ inline
 int HashTable::Hash(int3 position) const
 {
@@ -283,11 +141,5 @@ int HashTable::Hash(int3 position) const
     }
     return result * bucket_size_;
 }
-
-//inline int HashTable::GetNumAllocatedBlocks()
-//{
-//    return num_allocated_blocks_;
-//}
-
 
 }  // namespace tsdfvh

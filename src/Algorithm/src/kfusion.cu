@@ -453,40 +453,6 @@ bool KFusion::integration(uint frame)
     return false;
 }
 
-bool KFusion::deIntegration(sMatrix4 p,const Host &depth,const Host &rgb)
-{
-    image_copy(rawDepth,depth, rawDepth.size.x*rawDepth.size.y*sizeof(float));
-    image_copy(rawRgb,rgb, rawRgb.size.x*rawRgb.size.y*sizeof(uchar3));
-
-    TICK("deintegrate");
-    deIntegrateKernel<<<divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock), imageBlock>>>(volume,
-                                                                                           rawDepth,
-                                                                                           rawRgb,
-                                                                                           inverse(sMatrix4(&p)),
-                                                                                           camMatrix,
-                                                                                           params.mu,
-                                                                                           maxweight);    
-    TOCK();
-    return true;
-}
-
-bool KFusion::reIntegration(sMatrix4 p,const Host &depth,const Host &rgb)
-{    
-    uint s = params.inputSize.x*params.inputSize.y;
-    image_copy(rawDepth,depth, s*sizeof(float));
-    image_copy(rawRgb,rgb, s*sizeof(uchar3));
-    TICK("reintegrate");
-    integrateKernel<<<divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock), imageBlock>>>(volume,
-                                                                                           rawDepth,
-                                                                                           rawRgb,
-                                                                                           inverse(sMatrix4(&p)),
-                                                                                           camMatrix,
-                                                                                           params.mu,
-                                                                                           maxweight );
-    TOCK();
-    return true;
-}
-
 Image<TrackData, Host> KFusion::getTrackData()
 {
     Image<TrackData, Host> trackData;

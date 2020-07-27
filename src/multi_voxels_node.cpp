@@ -174,11 +174,16 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         publishVolumeProjection();
     }
 
+
     if(frame==150 )
     {
         char buf[256];
         sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
         fusion->saveVolume(buf);
+
+        sprintf(buf,"/tmp/voxels/f%d_hash",frame);
+        fusion->saveHash(buf);
+
     }
 }
 

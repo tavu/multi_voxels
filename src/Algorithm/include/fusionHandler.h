@@ -27,6 +27,8 @@ class FusionHandler
         void setPose(const sMatrix4 &pose_);
 
         void saveVolume(const char *filename) const;
+
+        void saveHash(const char *filename) const;
         
     private:
         KFusion *_fusion;

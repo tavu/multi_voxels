@@ -120,14 +120,14 @@ __global__ void vertex2depthKernel(Image<float> render,
     }
 }
 
-__global__ void initVolumeKernel(Volume volume,const float2 val)
-{
-    uint3 pos = make_uint3(thr2pos2());
-    for (pos.z=0; pos.z < volume.getResolution().z; pos.z++)
-    {
-        volume.set(pos, val);
-    }
-}
+//__global__ void initVolumeKernel(Volume volume,const float2 val)
+//{
+//    uint3 pos = make_uint3(thr2pos2());
+//    for (pos.z=0; pos.z < volume.getResolution().z; pos.z++)
+//    {
+//        volume.set(pos, val);
+//    }
+//}
 
 __global__ void raycastKernel(Image<float3> pos3D,
                               Image<float3> normal,
@@ -224,7 +224,7 @@ __global__ void fuseVolumesKernel(Volume dstVol,
         p_data.x = clamp( (w*p_data.x + w_interp*tsdf) / new_w, -1.f, 1.f);
         p_data.y=fminf(new_w, maxweight);
 
-        dstVol.set(pix,p_data, fcol);
+//        dstVol.set(pix,p_data, fcol);
 
     }
 }
@@ -319,85 +319,6 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
 
             __threadfence();
             //printf("v:%f %f %f %f\n",p_data.x,p_data.y,p_data_n.x,p_data_n.y);
-        }
-    }
-}
-
-//TODO fix me
-__global__ void deIntegrateKernel(Volume vol,
-                                  const Image<float> depth,
-                                  const Image<uchar3> rgb,
-                                  const sMatrix4 invTrack,
-                                  const sMatrix4 K,
-                                  const float mu,
-                                  const float maxweight)
-{
-    uint3 pix = make_uint3(thr2pos2());
-    float3 pos = invTrack * vol.pos(pix);
-    float3 cameraX = K * pos;
-    const float3 delta = rotate(invTrack,make_float3(0, 0, vol.getDimensions().z / vol.getResolution().z));
-    const float3 cameraDelta = rotate(K, delta);
-
-    for (pix.z=0; pix.z!=vol.getResolution().z; pix.z++, pos += delta, cameraX +=cameraDelta)
-    {
-        if (pos.z < 0.0001f) // some near plane constraint
-            continue;
-
-        const float2 pixel = make_float2(cameraX.x / cameraX.z + 0.5f,
-                                         cameraX.y / cameraX.z + 0.5f);
-
-        if (pixel.x < 0 || pixel.x > depth.size.x - 1 || pixel.y < 0|| pixel.y > depth.size.y - 1)
-            continue;
-
-        const uint2 px = make_uint2(pixel.x, pixel.y);
-
-        if (depth[px] == 0)
-            continue;
-
-        const float diff = (depth[px] - cameraX.z) *
-                           sqrt(1 + sq(pos.x / pos.z) + sq(pos.y / pos.z));
-
-        if (diff > -mu)
-        {
-            const float sdf = fminf(1.f, diff / mu);
-            float2 p_data = vol[pix];
-
-            float3 fcol;
-            float w=fmin(p_data.y,maxweight);
-            float new_w=w-1;
-            //if w is 0 restore initial contitions
-            if(new_w==0)
-            {
-                p_data.x = 1;
-                p_data.y = 0;
-                fcol = make_float3(0.0,0.0,0.0);
-            }
-            else
-            {
-#ifdef USE_LAB
-                fcol=rgb2lab(rgb[px]);
-#else
-                fcol = make_float3(rgb[px].x,rgb[px].y,rgb[px].z);
-#endif
-                float3 p_color = vol.getColor(pix);
-
-                float w=fmin(p_data.y,maxweight);
-
-
-                p_data.x = clamp( (w * p_data.x - sdf) / new_w,-1.f,1.f);
-                fcol.x = (w * p_color.x - fcol.x ) / new_w;
-                fcol.y = (w * p_color.y - fcol.y ) / new_w;
-                fcol.z = (w * p_color.z - fcol.z ) / new_w;
-
-                /*
-                frgb.x=clamp(frgb.x,MIN_L,MAX_L);
-                frgb.y=clamp(frgb.y,MIN_A,MAX_A);
-                frgb.z=clamp(frgb.z,MIN_B,MAX_B);
-                */
-                p_data.y = p_data.y-1;
-            }
-
-            vol.set(pix,p_data, fcol);
         }
     }
 }

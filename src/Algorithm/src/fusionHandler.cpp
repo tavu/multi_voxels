@@ -10,6 +10,8 @@
 #include"kfusion.h"
 #include"tsdfvh/voxel.h"
 
+#include<fstream>
+
 FusionHandler::FusionHandler(const kparams_t &p,sMatrix4 initPose)
     :params(p)
 {
@@ -97,4 +99,21 @@ void FusionHandler::saveVolume(const char *filename) const
     delete []host_data;
 }
 
+void FusionHandler::saveHash(const char *filename) const
+{
+    Volume v=_fusion->getVolume();
+    int hashSize=v.getHashSize();
+
+    tsdfvh::HashEntry *e=new tsdfvh::HashEntry[hashSize];
+
+    v.saveHash(e);
+    std::ofstream outFile(filename, std::ios::out);
+    for(int i=0;i<hashSize;i++)
+    {
+        outFile<<"("<<e[i].position.x<<","<<
+                      e[i].position.y<<","<<
+                      e[i].position.z<<"):"<<e[i].next_ptr<<"\n";
+    }
+    outFile.close();
+}
 

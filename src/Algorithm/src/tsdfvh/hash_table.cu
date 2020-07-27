@@ -77,13 +77,6 @@ void HashTable::Free()
 
 __global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries)
 {
-//    int index = blockIdx.x * blockDim.x + threadIdx.x;
-//    int stride = blockDim.x * gridDim.x;
-//    for (int i = index; i < num_entries; i += stride)
-//    {
-//        entries[i].next_ptr = kFreeEntry;
-//        entries[i].position = make_int3(0, 0, 0);
-//    }
      int idx = blockIdx.x*blockDim.x + threadIdx.x;
      if(idx<num_entries)
      {
@@ -97,7 +90,6 @@ __global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries)
 __global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
     if (index == 0)
     {
         heap->heap_counter_ = heap_size_ - 1;
@@ -107,13 +99,6 @@ __global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
     {
         heap->heap_[index] = index + num_buckets ;
     }
-
-//    for (int i = index; i < heap_size_; i += stride)
-//    {
-//        //heap->heap_[i] = num_blocks - i - 1;
-//        //heap->heap_[i] = heap_size_ - i + num_buckets -1;
-//        heap->heap_[i] = i + num_buckets ;
-//    }
 }
 
 __global__ void initVoxelsKernel(voxel_t *voxels, int size )
@@ -121,8 +106,6 @@ __global__ void initVoxelsKernel(voxel_t *voxels, int size )
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     if(idx<size)
     {
-//        printf("IDX:%d\n",idx);
-        //=make_float3(0.0,0.0,0.0);
         voxels[idx].color.x=0.0;
         voxels[idx].color.y=0.0;
         voxels[idx].color.z=0.0;

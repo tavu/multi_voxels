@@ -20,6 +20,7 @@
 //float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
 
 #include"utils.h"
+#include"tsdfvh/hash_entry.h"
 
 struct VolumeCpu
 {
@@ -184,6 +185,18 @@ class Volume
             return nullptr;
         }
 
+        int getHashSize() const
+        {
+            return hashTable.num_entries_;
+        }
+
+        void saveHash(tsdfvh::HashEntry *cpudata) const
+        {
+            cudaMemcpy(cpudata,
+                       (void *)hashTable.entries_,
+                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
+                       cudaMemcpyDeviceToHost);
+        }
 
         //Get Voxel
         __device__ voxel_t* getVoxel(const int3 &pos, int &block_idx) const
@@ -203,69 +216,31 @@ class Volume
 
         }
 
+
 //        __device__ __forceinline__
-//        tsdfvh::Voxel getVoxel(int x, int y, int z) const
+//        void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
 //        {
-//            int3 block_position = blockPosition(x,y,z);
-//            int3 local_voxel = voxelPosition(x,y,z);
-//            int block_idx = hashTable.FindHashEntry(block_position);
+//            return;
+////            int3 block_position = blockPosition(x,y,z);
 
-//            if (block_idx<0)
-//            {
-//                tsdfvh::Voxel voxel;
-//                voxel.sdf = 1;
-//                voxel.color = make_float3(0.0, 0.0, 0.0);
-//                voxel.weight = 0;
-//                return voxel;
-//            }
-//            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
-//            return voxel;
+////            int block_idx=-1;
+////            int count=0;
+////            do
+////            {
+////                block_idx=hashTable.AllocateBlock(block_position);
+////                count++;
+////            }while(block_idx==-1 && count<bucket_size);
+
+////            if(block_idx<0)
+////            {
+////                printf("Error allocating block:%d\n",count);
+////                return ;
+////            }
+
+////            int3 local_voxel = voxelPosition(x,y,z);
+////            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
+////            voxel=v;
 //        }
-
-        __device__ __forceinline__
-        void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
-        {
-            return;
-//            int3 block_position = blockPosition(x,y,z);
-
-//            int block_idx=-1;
-//            int count=0;
-//            do
-//            {
-//                block_idx=hashTable.AllocateBlock(block_position);
-//                count++;
-//            }while(block_idx==-1 && count<bucket_size);
-
-//            if(block_idx<0)
-//            {
-//                printf("Error allocating block:%d\n",count);
-//                return ;
-//            }
-
-//            int3 local_voxel = voxelPosition(x,y,z);
-//            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
-//            voxel=v;
-        }
-
-//        //IDX
-//        __host__ __device__ __forceinline__
-//        uint getIdx(int x, int y, int z) const
-//        {
-//            return x + y * _resolution.x + z * _resolution.x * _resolution.y;
-//        }
-
-//        __host__ __device__ __forceinline__
-//        uint getIdx(const uint3 &pos) const
-//        {
-//            return getIdx(pos.x, pos.y, pos.z);
-//        }
-
-//        __host__ __device__ __forceinline__
-//        uint getIdx(const int3 &pos) const
-//        {
-//            return getIdx(pos.x, pos.y, pos.z);
-//        }
-
 
         //Get SDF data
         __device__
@@ -363,43 +338,6 @@ class Volume
         float blue(const int3 & pos) const
         {
             return getColor(pos.x, pos.y, pos.z).z;
-        }
-
-        //Set Data
-        __device__
-        void set(int x, int y, int z, const float2 &d, const float3 &c)
-        {
-            tsdfvh::Voxel v;
-            v.color=c;
-            v.setTsdf(d.x);
-            v.setWeight(d.y);
-            setVoxel(v, x, y, z);
-        }
-
-        __device__
-        void set(const int3 & pos, const float2 & d)
-        {
-            float3 c=make_float3(0.0,0.0,0.0);
-            set(pos.x, pos.y, pos.z, d, c);
-        }
-
-        __device__
-        void set(const uint3 & pos, const float2 & d)
-        {
-            float3 c=make_float3(0.0,0.0,0.0);
-            set(pos.x, pos.y, pos.z, d, c);
-        }
-
-        __device__
-        void set(const int3 & pos, const float2 &d,const float3 &c)
-        {
-            set(pos.x, pos.y, pos.z, d, c);
-        }
-
-        __device__
-        void set(const uint3 & pos, const float2 &d,const float3 &c)
-        {
-            set(pos.x, pos.y, pos.z, d, c);
         }
 
 

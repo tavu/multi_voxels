@@ -61,7 +61,7 @@ class HashEntry
 __device__ inline
 bool isEqual(volatile HashEntry &entry, const int3 &position)
 {
-    return (entry.next_ptr>0 || entry.next_ptr == kTailEntry) &&
+    return (entry.next_ptr>=0 || entry.next_ptr == kTailEntry) &&
             entry.position.x==position.x &&
             entry.position.y==position.y &&
             entry.position.z==position.z;

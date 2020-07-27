@@ -39,8 +39,8 @@ typedef struct
     float rerror=1e5;
 
     //for hashing
-    int num_buckets = 500;
-    int bucket_size = 20;
+    int num_buckets = 5000;
+    int bucket_size = 2;
     int block_size = 8;
 
 } kparams_t;
