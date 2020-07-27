@@ -173,7 +173,7 @@ class Volume
             int3 block_position = blockPosition(pos.x,pos.y,pos.z);
             int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
 
-            if(block_idx>=0 && hashTable.entries_[block_idx].isEqual(block_position) )
+            if(block_idx>=0 && isEqual(hashTable.entries_[block_idx],block_position) )
             {
                 return &hashTable.GetVoxel(block_idx,local_voxel);
             }
@@ -188,7 +188,7 @@ class Volume
         //Get Voxel
         __device__ voxel_t* getVoxel(const int3 &pos, int &block_idx) const
         {
-            if(block_idx<0 || !hashTable.entries_[block_idx].isEqual(pos) )
+            if(block_idx<0 || !isEqual(hashTable.entries_[block_idx],pos) )
             {
                 int3 block_position = blockPosition(pos.x,pos.y,pos.z);
                 block_idx=hashTable.FindHashEntry(block_position);

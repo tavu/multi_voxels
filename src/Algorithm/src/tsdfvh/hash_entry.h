@@ -29,35 +29,62 @@ class HashEntry
          */
         int next_ptr = kFreeEntry;
 
-        __device__ inline bool isEmpty() const
-        {
-            return next_ptr==kFreeEntry;
-        }
+//        __device__ inline bool isEmpty() const
+//        {
+//            return next_ptr==kFreeEntry;
+//        }
 
-        __device__ inline bool isValid() const
-        {
-            return next_ptr>0 || next_ptr == kTailEntry;
-        }
+//        __device__ inline bool isValid() const
+//        {
+//            return next_ptr>0 || next_ptr == kTailEntry;
+//        }
 
-        __device__ inline bool isLocked() const
-        {
-            return next_ptr==kLockEntry;
-        }
+//        __device__ inline bool isLocked() const
+//        {
+//            return next_ptr==kLockEntry;
+//        }
 
-        __device__ inline bool isTail() const
-        {
-            return next_ptr==kTailEntry;
-        }
+//        __device__ inline bool isTail() const
+//        {
+//            return next_ptr==kTailEntry;
+//        }
 
-        __device__ inline bool isEqual(const int3 &pos) const
-        {
-            return isValid() &&
-                   position.x==pos.x &&
-                   position.y==pos.y &&
-                   position.z==pos.z;
-        }
-
+//        __device__ inline bool isEqual(const int3 &pos) const
+//        {
+//            return isValid() &&
+//                   position.x==pos.x &&
+//                   position.y==pos.y &&
+//                   position.z==pos.z;
+//        }
 };
+
+__device__ inline
+bool isEqual(volatile HashEntry &entry, const int3 &position)
+{
+    return (entry.next_ptr>0 || entry.next_ptr == kTailEntry) &&
+            entry.position.x==position.x &&
+            entry.position.y==position.y &&
+            entry.position.z==position.z;
+}
+
+__device__ inline
+bool isTail(volatile HashEntry &entry)
+{
+    return entry.next_ptr==kTailEntry;
+}
+
+__device__ inline
+bool isLocked(volatile HashEntry &entry)
+{
+    return entry.next_ptr==kLockEntry;
+}
+
+__device__ inline
+bool isEmpty(volatile HashEntry &entry)
+{
+    return entry.next_ptr==kFreeEntry;
+}
+
 
 }  // namespace tsdfvh
 

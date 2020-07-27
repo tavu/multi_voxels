@@ -5,7 +5,7 @@
 
 namespace tsdfvh
 {
-__global__ void initEntriesKernel(HashEntry *entries, int num_entries);
+__global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries);
 
 __global__ void initHeapKernel(Heap *heap,
                                int num_blocks, int num_buckets);
@@ -50,7 +50,7 @@ void HashTable::setEmpty()
     printCUDAError();
 
     printf("initHeapKernel\n");
-    thread_blocks = (heap_size_ + threads_per_block - 1) / threads_per_block;
+    thread_blocks = (heap_size_ + threads_per_block ) / threads_per_block;
     initHeapKernel<<<thread_blocks, threads_per_block>>>(heap_, heap_size_,num_buckets_);
     printCUDAError();
 
@@ -70,12 +70,12 @@ void HashTable::setEmpty()
 
 void HashTable::Free()
 {
-    cudaFree(entries_);
+    cudaFree( (void*)entries_);
     cudaFree( (void*)voxels_);
     cudaFree(heap_);
 }
 
-__global__ void initEntriesKernel(HashEntry *entries, int num_entries)
+__global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries)
 {
 //    int index = blockIdx.x * blockDim.x + threadIdx.x;
 //    int stride = blockDim.x * gridDim.x;
@@ -88,7 +88,9 @@ __global__ void initEntriesKernel(HashEntry *entries, int num_entries)
      if(idx<num_entries)
      {
          entries[idx].next_ptr = kFreeEntry;
-         entries[idx].position = make_int3(0, 0, 0);
+         entries[idx].position.x = 0;
+         entries[idx].position.y = 0;
+         entries[idx].position.z = 0;
      }
 }
 
@@ -101,12 +103,17 @@ __global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
         heap->heap_counter_ = heap_size_ - 1;
     }
 
-    for (int i = index; i < heap_size_; i += stride)
+    if(index<heap_size_)
     {
-        //heap->heap_[i] = num_blocks - i - 1;
-        //heap->heap_[i] = heap_size_ - i + num_buckets -1;
-        heap->heap_[i] = i + num_buckets ;
+        heap->heap_[index] = index + num_buckets ;
     }
+
+//    for (int i = index; i < heap_size_; i += stride)
+//    {
+//        //heap->heap_[i] = num_blocks - i - 1;
+//        //heap->heap_[i] = heap_size_ - i + num_buckets -1;
+//        heap->heap_[i] = i + num_buckets ;
+//    }
 }
 
 __global__ void initVoxelsKernel(voxel_t *voxels, int size )

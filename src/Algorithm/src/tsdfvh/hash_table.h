@@ -89,7 +89,7 @@ class HashTable
         *
         * @return     The hash entry.
         */
-        __device__ __forceinline__ HashEntry GetHashEntry(int i);
+//        __device__ __forceinline__ HashEntry GetHashEntry(int i);
 
         __device__
         inline voxel_t& GetVoxel(int entry_idx, int3 vpos) const;
@@ -104,7 +104,7 @@ class HashTable
         __host__ __device__ int Hash(int3 position) const;
 
         /** Entries of the hash table */
-        HashEntry *entries_;
+        volatile HashEntry *entries_;
 
         /** Voxels in the grid */
         voxel_t *voxels_;

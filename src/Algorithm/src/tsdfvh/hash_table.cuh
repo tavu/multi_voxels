@@ -14,11 +14,11 @@ int HashTable::GetNumEntries() {
     return num_entries_;
 }
 
-__device__ inline
-HashEntry HashTable::GetHashEntry(int i)
-{
-    return entries_[i];
-}
+//__device__ inline
+//HashEntry HashTable::GetHashEntry(int i)
+//{
+//    return entries_[i];
+//}
 
 __device__
 inline voxel_t& HashTable::GetVoxel(int entry_idx, int3 vpos) const
@@ -28,7 +28,6 @@ inline voxel_t& HashTable::GetVoxel(int entry_idx, int3 vpos) const
     return voxels_[idx];
 }
 
-
 __device__ inline
 int HashTable::AllocateBlock(const int3 &position)
 {
@@ -36,9 +35,9 @@ int HashTable::AllocateBlock(const int3 &position)
     int idx = Hash(position);
     do
     {
-        HashEntry &entry=entries_[idx];
+        volatile HashEntry &entry=entries_[idx];
         //Block is found
-        if( entry.isEqual(position) )
+        if( isEqual(entry,position) )
         {
             //printf("block found.\n");
             return idx;
@@ -51,14 +50,17 @@ int HashTable::AllocateBlock(const int3 &position)
         }
         else //Block is free tail or locked
         {
-            if(entry.isTail() )
+            if(isTail(entry) )
             {
-                int mutex = atomicCAS(&entry.next_ptr, kTailEntry, kLockEntry);
+                int mutex = atomicCAS( (int*)  &entry.next_ptr, kTailEntry, kLockEntry);
                 if (mutex == kTailEntry)
                 {
                     int next_ptr=heap_->Consume();
 
-                    entries_[next_ptr].position = position;
+                    entries_[next_ptr].position.x = position.x;
+                    entries_[next_ptr].position.y = position.y;
+                    entries_[next_ptr].position.z = position.z;
+
                     entries_[next_ptr].next_ptr = kTailEntry;
 
                     __threadfence();
@@ -67,12 +69,15 @@ int HashTable::AllocateBlock(const int3 &position)
                     return next_ptr;
                 }
             }
-            else if(entry.isEmpty() )
+            else if(isEmpty(entry))
             {
-                int mutex = atomicCAS(&entry.next_ptr, kFreeEntry, kLockEntry);
+                int mutex = atomicCAS( (int*) &entry.next_ptr, kFreeEntry, kLockEntry);
                 if (mutex == kFreeEntry)
                 {
-                    entry.position = position;
+
+                    entry.position.x = position.x;
+                    entry.position.y = position.y;
+                    entry.position.z = position.z;
 
                      __threadfence();
                     entries_[idx].next_ptr=kTailEntry;
@@ -107,14 +112,14 @@ int HashTable::FindHashEntry(int3 position) const
     int idx = Hash(position);
     do
     {
-        HashEntry &entry=entries_[idx];
+//        volatile HashEntry &entry=entries_[idx];
         //Block is found
-        if( entry.isEqual(position) )
+        if( isEqual(entries_[idx],position) )
         {
             return idx;
         }
 
-        idx=entry.next_ptr;
+        idx=entries_[idx].next_ptr;
     } while(idx>=0 );
 
     return -1;

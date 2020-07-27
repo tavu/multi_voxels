@@ -317,6 +317,7 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             v->setWeight(p_data.y);
             v->color=fcol;
 
+            __threadfence();
             //printf("v:%f %f %f %f\n",p_data.x,p_data.y,p_data_n.x,p_data_n.y);
         }
     }
@@ -515,7 +516,7 @@ __global__ void renderRgbKernel(Image<uchar3> render,
     {
 
         float3 vertex=vert[pos];
-        if(!volume.isPointInside(vertex) )
+        if(!volume.isPointInside(vertex)  )
         {
             render.el() = make_uchar3(0, 0, 0);
         }

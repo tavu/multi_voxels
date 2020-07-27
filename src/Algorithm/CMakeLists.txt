@@ -32,7 +32,7 @@ SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 # -arch=sm_50;
 find_package(CUDA REQUIRED)
 set( CUDA_NVCC_FLAGS 
-    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC; -I${CMAKE_CURRENT_LIST_DIR}/include" 
+    "${CUDA_NVCC_FLAGS};-Xcompiler;-fPIC; -I${CMAKE_CURRENT_LIST_DIR}/include" -arch=sm_50; 
 )
 
 cuda_add_library(multi_voxels_lib   STATIC  ${cuda_srcs}  
