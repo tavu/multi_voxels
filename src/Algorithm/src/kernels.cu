@@ -4,17 +4,26 @@
 #include<stdint.h>
 #include"constant_parameters.h"
 #include"rgb2Lab.h"
-
+#include"tsdfvh/voxel.h"
 // #define USE_LAB
 
 __global__ void getVoxelData(Volume vol, short2 *output)
 {
-    uint3 pix = make_uint3(thr2pos2());
+    int3 pix = make_int3(thr2pos2());
+    int blockIdx=-1;
     for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++)
     {
         int idx= pix.x + pix.y * vol.getResolution().x + pix.z * vol.getResolution().x * vol.getResolution().y;
-        float2 p_data = vol[pix];
-        output[idx]=make_short2(p_data.x * 32766.0f, p_data.y);
+//        float2 p_data = vol[pix];
+        voxel_t *v=vol.getVoxel(pix,blockIdx);
+        if(v!=nullptr)
+        {
+            output[idx]=make_short2(v->sdf,v->weight);
+        }
+        else
+        {
+            output[idx]=make_short2(float2short,0.0);
+        }
     }
 }
 
@@ -234,6 +243,12 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
     const float3 delta = rotate(invTrack,make_float3(0, 0, vol.getDimensions().z / vol.getResolution().z));
     const float3 cameraDelta = rotate(K, delta);
 
+    if(pix.x>=vol.getResolution().x || pix.y>=vol.getResolution().y)
+    {
+        printf("pixel out of bound.\n");
+        return;
+    }
+
     int blockIdx=-1;
     for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++, pos += delta, cameraX +=cameraDelta)
     {
@@ -261,11 +276,14 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             const float sdf = fminf(1.f, diff / mu);
 
             float2 p_data=make_float2(1.0,0.0);
-//            float3 p_color=make_float3(0.0, 0.0, 0.0);
+
             tsdfvh::Voxel *v=vol.insertVoxel(pix,blockIdx);
 
             if(blockIdx<0)
+            {
+                printf("block not found.\n");
                 continue;
+            }
 
             p_data.x=v->getTsdf();
             p_data.y=v->getWeight();
@@ -292,9 +310,8 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
             frgb.y=clamp(frgb.y,MIN_A,MAX_A);
             frgb.z=clamp(frgb.z,MIN_B,MAX_B);
             */
-            //p_data.y=p_data.y+1;
-            p_data.y=fminf(new_w, maxweight);
-            //vol.set(pix,p_data, fcol);
+
+            p_data.y=fminf(new_w, maxweight);            
 
             v->setTsdf(p_data.x);
             v->setWeight(p_data.y);

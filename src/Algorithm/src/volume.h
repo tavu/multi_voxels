@@ -31,6 +31,8 @@ struct VolumeCpu
     tsdfvh::Voxel *voxels;
 };
 
+
+
 class Volume
 {
     private:
@@ -79,7 +81,7 @@ class Volume
           int3 position_local = make_int3(x % block_size,
                                           y % block_size,
                                           z % block_size);
-
+          /*
           if (position_local.x < 0)
               position_local.x += block_size;
 
@@ -88,7 +90,7 @@ class Volume
 
           if (position_local.z < 0)
               position_local.z += block_size;
-
+          */
           return position_local;
         }
 
@@ -166,7 +168,7 @@ class Volume
 
         //insert voxel
         __device__ __forceinline__
-        tsdfvh::Voxel* insertVoxel(const int3 &pos, int &block_idx)
+        voxel_t* insertVoxel(const int3 &pos, int &block_idx)
         {
             int3 block_position = blockPosition(pos.x,pos.y,pos.z);
             int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
@@ -184,7 +186,7 @@ class Volume
 
 
         //Get Voxel
-        __device__ tsdfvh::Voxel* getVoxel(const int3 &pos, int &block_idx)
+        __device__ voxel_t* getVoxel(const int3 &pos, int &block_idx) const
         {
             if(block_idx<0 || !hashTable.entries_[block_idx].isEqual(pos) )
             {
@@ -201,47 +203,48 @@ class Volume
 
         }
 
-        __device__ __forceinline__
-        tsdfvh::Voxel getVoxel(int x, int y, int z) const
-        {
-            int3 block_position = blockPosition(x,y,z);
-            int3 local_voxel = voxelPosition(x,y,z);
-            int block_idx = hashTable.FindHashEntry(block_position);
+//        __device__ __forceinline__
+//        tsdfvh::Voxel getVoxel(int x, int y, int z) const
+//        {
+//            int3 block_position = blockPosition(x,y,z);
+//            int3 local_voxel = voxelPosition(x,y,z);
+//            int block_idx = hashTable.FindHashEntry(block_position);
 
-            if (block_idx<0)
-            {
-                tsdfvh::Voxel voxel;
-                voxel.sdf = 1;
-                voxel.color = make_float3(0.0, 0.0, 0.0);
-                voxel.weight = 0;
-                return voxel;
-            }
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
-            return voxel;
-        }
+//            if (block_idx<0)
+//            {
+//                tsdfvh::Voxel voxel;
+//                voxel.sdf = 1;
+//                voxel.color = make_float3(0.0, 0.0, 0.0);
+//                voxel.weight = 0;
+//                return voxel;
+//            }
+//            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
+//            return voxel;
+//        }
 
         __device__ __forceinline__
         void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
         {
-            int3 block_position = blockPosition(x,y,z);
+            return;
+//            int3 block_position = blockPosition(x,y,z);
 
-            int block_idx=-1;
-            int count=0;
-            do
-            {
-                block_idx=hashTable.AllocateBlock(block_position);
-                count++;
-            }while(block_idx==-1 && count<bucket_size);
+//            int block_idx=-1;
+//            int count=0;
+//            do
+//            {
+//                block_idx=hashTable.AllocateBlock(block_position);
+//                count++;
+//            }while(block_idx==-1 && count<bucket_size);
 
-            if(block_idx<0)
-            {
-                printf("Error allocating block:%d\n",count);
-                return ;
-            }
+//            if(block_idx<0)
+//            {
+//                printf("Error allocating block:%d\n",count);
+//                return ;
+//            }
 
-            int3 local_voxel = voxelPosition(x,y,z);
-            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
-            voxel=v;
+//            int3 local_voxel = voxelPosition(x,y,z);
+//            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
+//            voxel=v;
         }
 
 //        //IDX
@@ -268,10 +271,11 @@ class Volume
         __device__
         float2 getData(int x, int y, int z) const
         {
-            tsdfvh::Voxel v=getVoxel(x, y, z);
-            float2 ret=make_float2(v.getTsdf(),v.getWeight());
+            return make_float2(0,0);
+//            tsdfvh::Voxel v=getVoxel(x, y, z);
+//            float2 ret=make_float2(v.getTsdf(),v.getWeight());
 
-            return ret;
+//            return ret;
         }
 
         __device__
@@ -289,7 +293,14 @@ class Volume
         __device__
         float vs(const int3 & pos) const
         {
-            return getData(pos.x, pos.y, pos.z).x;
+            int blockIdx=-1;
+            voxel_t *v=getVoxel(pos,blockIdx);
+            if(v==nullptr)
+            {
+                return 1;
+            }
+            return v->getTsdf();
+            //return getData(pos.x, pos.y, pos.z).x;
         }
 
         __device__
@@ -313,8 +324,14 @@ class Volume
         __device__
         float3 getColor(int x, int y, int z) const
         {
-            tsdfvh::Voxel v=getVoxel(x, y, z);
-            return v.color;
+            int blockIdx=-1;
+            int3 pos=make_int3(x,y,z);
+            tsdfvh::Voxel *v=getVoxel(pos,blockIdx);
+            if(v==nullptr)
+            {
+                return make_float3(0.0, 0.0, 0.0);
+            }
+            return v->color;
         }
 
         __device__
@@ -463,13 +480,13 @@ class Volume
         
         void initDataFromCpu(VolumeCpu volCpu)
         {
-            uint size=_resolution.x * _resolution.y * _resolution.z;            
+//            uint size=_resolution.x * _resolution.y * _resolution.z;
 //            cudaMemcpy(voxels, volCpu.voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyHostToDevice);
         }
 
         void getCpuData(VolumeCpu &v)
         {
-            uint size=_resolution.x * _resolution.y * _resolution.z;
+//            uint size=_resolution.x * _resolution.y * _resolution.z;
 //            cudaMemcpy(v.voxels, voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyDeviceToHost);
         }
         

@@ -69,4 +69,6 @@ class Voxel
 
 }  // namespace tsdfvh
 
+typedef tsdfvh::Voxel voxel_t;
+
 #endif

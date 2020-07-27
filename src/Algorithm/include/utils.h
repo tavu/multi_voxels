@@ -28,7 +28,7 @@
 
 #include"sMatrix.h"
 
-#define PRINT_KERNEL_TIME
+//#define PRINT_KERNEL_TIME
 
 #define INVALID -2   // this is used to mark invalid entries in normal or vertex maps
 

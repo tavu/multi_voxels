@@ -136,7 +136,15 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         ROS_ERROR("Wrong sequence numbers.");
         return;
     }
-    
+
+//    if(frame==0 )
+//    {
+//        char buf[256];
+//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+//        fusion->saveVolume(buf);
+//    }
+
+
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
@@ -166,7 +174,7 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         publishVolumeProjection();
     }
 
-    if(frame==300 )
+    if(frame==150 )
     {
         char buf[256];
         sprintf(buf,"/tmp/voxels/f%d_voxels",frame);

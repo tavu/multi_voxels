@@ -9,7 +9,7 @@ __global__ void initEntriesKernel(HashEntry *entries, int num_entries);
 
 __global__ void initHeapKernel(Heap *heap,
                                int num_blocks, int num_buckets);
-__global__ void initVoxelsKernel(Voxel *voxels, int size );
+__global__ void initVoxelsKernel(voxel_t *voxels, int size );
 
 
 void HashTable::Init(int num_buckets,
@@ -41,12 +41,12 @@ void HashTable::Init(int num_buckets,
 void HashTable::setEmpty()
 {
     int threads_per_block = THREADS_PER_BLOCK;
-    int thread_blocks = (num_entries_ + threads_per_block - 1) / threads_per_block;
+    int thread_blocks = (num_entries_ + threads_per_block ) / threads_per_block;
 
     int vsize=block_size_*block_size_*block_size_*num_entries_;
 
     printf("initEntriesKernel\n");
-    initEntriesKernel<<<thread_blocks, threads_per_block>>>(entries_,num_entries_);
+    initEntriesKernel<<<(num_entries_+THREADS_PER_BLOCK)/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(entries_,num_entries_);
     printCUDAError();
 
     printf("initHeapKernel\n");
@@ -55,27 +55,41 @@ void HashTable::setEmpty()
     printCUDAError();
 
     printf("initVoxelsKernel\n");
-    initVoxelsKernel<<<vsize/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(voxels_,vsize);
+    initVoxelsKernel<<<(vsize+THREADS_PER_BLOCK)/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(voxels_,vsize);
     printCUDAError();
+
+//    voxel_t *v=new voxel_t[vsize];
+//    cudaMemcpy(v,voxels_,vsize*sizeof(voxel_t),cudaMemcpyDeviceToHost);
+
+//    for(int i=0;i<vsize;i++)
+//    {
+//        printf("(%d,%d) (%f,%f,%f)\n",v[i].sdf,v[i].weight,v[i].color.x,v[i].color.y,v[i].color.z );
+//    }
 
 }
 
 void HashTable::Free()
 {
     cudaFree(entries_);
-    cudaFree(voxels_);
+    cudaFree( (void*)voxels_);
     cudaFree(heap_);
 }
 
 __global__ void initEntriesKernel(HashEntry *entries, int num_entries)
 {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    for (int i = index; i < num_entries; i += stride)
-    {
-        entries[i].next_ptr = kFreeEntry;
-        entries[i].position = make_int3(0, 0, 0);
-    }
+//    int index = blockIdx.x * blockDim.x + threadIdx.x;
+//    int stride = blockDim.x * gridDim.x;
+//    for (int i = index; i < num_entries; i += stride)
+//    {
+//        entries[i].next_ptr = kFreeEntry;
+//        entries[i].position = make_int3(0, 0, 0);
+//    }
+     int idx = blockIdx.x*blockDim.x + threadIdx.x;
+     if(idx<num_entries)
+     {
+         entries[idx].next_ptr = kFreeEntry;
+         entries[idx].position = make_int3(0, 0, 0);
+     }
 }
 
 __global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
@@ -95,14 +109,19 @@ __global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
     }
 }
 
-__global__ void initVoxelsKernel(Voxel *voxels, int size )
+__global__ void initVoxelsKernel(voxel_t *voxels, int size )
 {
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     if(idx<size)
     {
-        voxels[idx].color=make_float3(0.0,0.0,0.0);
-        voxels[idx].weight=0.0;
-        voxels[idx].sdf=1.0;
+//        printf("IDX:%d\n",idx);
+        //=make_float3(0.0,0.0,0.0);
+        voxels[idx].color.x=0.0;
+        voxels[idx].color.y=0.0;
+        voxels[idx].color.z=0.0;
+
+        voxels[idx].setWeight(0.0);
+        voxels[idx].setTsdf(1.0);
     }
 }
 

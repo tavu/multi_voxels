@@ -92,7 +92,7 @@ class HashTable
         __device__ __forceinline__ HashEntry GetHashEntry(int i);
 
         __device__
-        inline Voxel& GetVoxel(int entry_idx, int3 vpos) const;
+        inline voxel_t& GetVoxel(int entry_idx, int3 vpos) const;
 
         /**
         * @brief      Computes the hash value from a 3D position.
@@ -107,7 +107,7 @@ class HashTable
         HashEntry *entries_;
 
         /** Voxels in the grid */
-        Voxel *voxels_;
+        voxel_t *voxels_;
 
         /** Object that handles the indices of the voxel blocks */
         Heap *heap_;

@@ -21,7 +21,7 @@ HashEntry HashTable::GetHashEntry(int i)
 }
 
 __device__
-inline Voxel& HashTable::GetVoxel(int entry_idx, int3 vpos) const
+inline voxel_t& HashTable::GetVoxel(int entry_idx, int3 vpos) const
 {
     int vidx=vpos.x + vpos.y * block_size_ + vpos.z * block_size_ * block_size_;
     int idx=entry_idx*block_size_*block_size_*block_size_+vidx;
@@ -33,11 +33,9 @@ __device__ inline
 int HashTable::AllocateBlock(const int3 &position)
 {
 #ifdef __CUDACC__
-
     int idx = Hash(position);
     do
     {
-        //printf("IDX:%d",idx);
         HashEntry &entry=entries_[idx];
         //Block is found
         if( entry.isEqual(position) )
@@ -47,7 +45,7 @@ int HashTable::AllocateBlock(const int3 &position)
         }
 
         //Block has a next pointer
-        if(entry.next_ptr > 0)
+        if(entry.next_ptr >= 0)
         {
             idx=entry.next_ptr;
         }
@@ -63,8 +61,9 @@ int HashTable::AllocateBlock(const int3 &position)
                     entries_[next_ptr].position = position;
                     entries_[next_ptr].next_ptr = kTailEntry;
 
-                     __threadfence();
-                    entry.next_ptr=next_ptr;
+                    __threadfence();
+                    entries_[idx].next_ptr=next_ptr;
+                    __threadfence();
                     return next_ptr;
                 }
             }
@@ -74,8 +73,10 @@ int HashTable::AllocateBlock(const int3 &position)
                 if (mutex == kFreeEntry)
                 {
                     entry.position = position;
+
                      __threadfence();
-                    entry.next_ptr=kTailEntry;
+                    entries_[idx].next_ptr=kTailEntry;
+                    __threadfence();
                     return idx;
                 }
             }
@@ -87,8 +88,7 @@ int HashTable::AllocateBlock(const int3 &position)
             }
             */
         }
-    } while(idx>0);
-
+    } while(idx>=0);
 #endif
     return -1;
 }
