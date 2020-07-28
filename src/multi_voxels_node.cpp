@@ -175,16 +175,16 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
     }
 
 
-    if(frame==150 )
-    {
-        char buf[256];
-        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-        fusion->saveVolume(buf);
+//    if(frame==150 )
+//    {
+//        char buf[256];
+//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
+//        fusion->saveVolume(buf);
 
-        sprintf(buf,"/tmp/voxels/f%d_hash",frame);
-        fusion->saveHash(buf);
+//        sprintf(buf,"/tmp/voxels/f%d_hash",frame);
+//        fusion->saveHash(buf);
 
-    }
+//    }
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
@@ -255,6 +255,8 @@ void optimizedPathCb(const nav_msgs::Path &msg)
             optPose(2,3)+=params.volume_direction.z;                
             
             fusion->setKeyFramePose(i,optPose);
+
+            std::cout<<optPose<<std::endl;
         }
 
         geometry_msgs::Pose lastOptPoseRos=msg.poses.back().pose;
@@ -265,9 +267,9 @@ void optimizedPathCb(const nav_msgs::Path &msg)
         lastKFPose(2,3)+=params.volume_direction.z;
         
         sMatrix4 lastKFPoseKF=fusion->getLastKFPose();
-        sMatrix4 currKPoseKF=fusion->getPose();
-
+        sMatrix4 currKPoseKF=fusion->getPose();    
         sMatrix4 delta=inverse(lastKFPoseKF)*currKPoseKF;
+
         currentPose=lastKFPose*delta;
     }
     //The last optimized pose is older than the current key frame

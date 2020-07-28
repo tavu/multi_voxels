@@ -110,9 +110,9 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
                                 const float mu,
                                 const float maxweight);
 
-__global__ void compareRgbKernel(const Image<uchar3> image1,
-                                 const Image<uchar3> image2,
-                                 Image<float>out);
+//__global__ void compareRgbKernel(const Image<uchar3> image1,
+//                                 const Image<uchar3> image2,
+//                                 Image<float>out);
 __global__ void renderTrackKernel(Image<uchar3> out,const Image<TrackData> data);
 __global__ void renderDepthKernel(Image<uchar3> out,
                                   const Image<float> depth,

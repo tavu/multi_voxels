@@ -39,31 +39,16 @@ class Voxel
             sdf=static_cast<short>(d*float2short);
         }
 
-        __device__ void Combine(const Voxel& voxel, uchar max_weight)
+        __device__ inline
+        float3 getColor() const
         {
-            color.x = static_cast<uchar>(
-                (static_cast<float>(color.x) * static_cast<float>(weight) +
-                    static_cast<float>(voxel.color.x) * static_cast<float>(voxel.weight)) /
-                    (static_cast<float>(weight) +
-                static_cast<float>(voxel.weight)));
-            color.y = static_cast<uchar>(
-                (static_cast<float>(color.y) * static_cast<float>(weight) +
-                    static_cast<float>(voxel.color.y) * static_cast<float>(voxel.weight)) /
-                    (static_cast<float>(weight) +
-                static_cast<float>(voxel.weight)));
-            color.z = static_cast<uchar>(
-                (static_cast<float>(color.z) * static_cast<float>(weight) +
-                    static_cast<float>(voxel.color.z) * static_cast<float>(voxel.weight)) /
-                    (static_cast<float>(weight) +
-                static_cast<float>(voxel.weight)));
+            return color;
+        }
 
-            sdf = (sdf * static_cast<float>(weight) +
-                    voxel.sdf * static_cast<float>(voxel.weight)) /
-                        (static_cast<float>(weight) + static_cast<float>(voxel.weight));
-
-            weight = weight + voxel.weight;
-            if (weight > max_weight)
-                weight = max_weight;
+        __device__ inline
+        void setColor(const float3 &col)
+        {
+            color=col;
         }
 };
 

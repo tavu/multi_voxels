@@ -13,23 +13,24 @@
 #include"tsdfvh/hash_table.h"
 #include"tsdfvh/hash_entry.h"
 
-//for short x
-//x * 0.00003051944088f
-//float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
-//data[p] = make_short2(d.x * 32766.0f, d.y);
-//float2 ret = make_float2(d.x * 0.00003051944088f, d.y); //  / 32766.0f
-
 #include"utils.h"
+#include"tsdfvh/hash_entry.h"
 #include"tsdfvh/hash_entry.h"
 
 struct VolumeCpu
 {
     uint frame;
     sMatrix4 pose;
-    uint3 resolution;
-    float3 dimensions;
+    //uint3 resolution;
+    //float3 dimensions;
+
+    int bucket_size;
+    int num_of_buckets;
+    int block_size;
 
     tsdfvh::Voxel *voxels;
+    tsdfvh::HashEntry *entries;
+    uint *heap;
 };
 
 
@@ -38,34 +39,49 @@ class Volume
 {
     private:
         typedef float (Volume::*Fptr)(const int3&) const;
-        const kparams_t &params;
+
+        uint3 _resolution;
+        float3 dim;
+        float3 voxelSize;
+        int3 _offset;
+        tsdfvh::HashTable hashTable;
         int block_size;
         int bucket_size;
+        int num_of_buckets;
+
 
     public:
-        Volume(const kparams_t &par)
-            :params(par)
+        Volume(const kparams_t &params)
         {
             _resolution = params.volume_resolution;
             dim = params.volume_size;
 
             voxelSize=dim/_resolution;
             _offset=make_int3(0,0,0);
+
             block_size=params.block_size;
-
-            block_resolution=make_uint3(_resolution.x/block_size,
-                                        _resolution.y/block_size,
-                                        _resolution.z/block_size);
-
-            if(_resolution.x%block_size)
-                block_resolution.x++;
-            if(_resolution.y%block_size)
-                block_resolution.y++;
-            if(_resolution.z%block_size)
-                block_resolution.z++;
-
             bucket_size=params.bucket_size;
+            num_of_buckets=params.num_buckets;
 
+        }
+
+        __host__ __device__
+        int getBlockSize() const
+        {
+            return block_size;
+        }
+
+        __host__ __device__
+        int getBucketSize() const
+        {
+            return bucket_size;
+        }
+
+
+        __host__ __device__
+        int getNumOfBuckets() const
+        {
+            return num_of_buckets;
         }
 
         __host__ __device__
@@ -110,13 +126,6 @@ class Volume
             return voxelSize;
         }
 
-        __host__ __device__ float3 getSizeInMeters() const
-        {
-            return make_float3(voxelSize.x*_resolution.x,
-                               voxelSize.y*_resolution.y,
-                               voxelSize.z*_resolution.z);
-        }
-
         __host__ __device__ int3 getOffset() const
         {
             return _offset;
@@ -131,10 +140,6 @@ class Volume
 
         __host__ __device__ float3 getDimWithOffset() const
         {
-            //float3 ret=make_float3( dim.x+_offset.x*voxelSize.x,
-            //                        dim.y+_offset.y*voxelSize.y,
-            //                        dim.z+_offset.z*voxelSize.z);
-
             int3 v=maxVoxel();
             float3 ret;
             ret.x=(v.x)*voxelSize.x;
@@ -157,16 +162,21 @@ class Volume
             _offset.z+=off.z;
         }
 
-//        __host__ __device__ tsdfvh::Voxel*  getVoxelsPtr() const
-//        {
-//            return voxels;
-//        }
-
         __host__ __device__ float3 getDimensions() const
         {
             return dim;
         }                
 
+        __device__ __forceinline__
+        tsdfvh::HashEntry getHashEntry(int blockIdx) const
+        {
+            tsdfvh::HashEntry ret;
+            ret.next_ptr=hashTable.entries_[blockIdx].next_ptr;
+            ret.position=make_int3(hashTable.entries_[blockIdx].position.x,
+                                   hashTable.entries_[blockIdx].position.y,
+                                   hashTable.entries_[blockIdx].position.z);
+            return ret;
+        }
         //insert voxel
         __device__ __forceinline__
         voxel_t* insertVoxel(const int3 &pos, int &block_idx)
@@ -198,6 +208,19 @@ class Volume
                        cudaMemcpyDeviceToHost);
         }
 
+        int getHeapSize() const
+        {
+            return hashTable.heap_size_;
+        }
+
+        void saveHeap(uint *cpudata) const
+        {
+            cudaMemcpy(cpudata,
+                       hashTable.heap_->heap_,
+                       hashTable.heap_size_*sizeof(uint),
+                       cudaMemcpyDeviceToHost);
+        }
+
         //Get Voxel
         __device__ voxel_t* getVoxel(const int3 &pos, int &block_idx) const
         {
@@ -213,56 +236,6 @@ class Volume
             }
             int3 local_voxel = voxelPosition(pos.x,pos.y,pos.z);
             return &hashTable.GetVoxel(block_idx,local_voxel);
-
-        }
-
-
-//        __device__ __forceinline__
-//        void setVoxel(const tsdfvh::Voxel &v, int x, int y, int z)
-//        {
-//            return;
-////            int3 block_position = blockPosition(x,y,z);
-
-////            int block_idx=-1;
-////            int count=0;
-////            do
-////            {
-////                block_idx=hashTable.AllocateBlock(block_position);
-////                count++;
-////            }while(block_idx==-1 && count<bucket_size);
-
-////            if(block_idx<0)
-////            {
-////                printf("Error allocating block:%d\n",count);
-////                return ;
-////            }
-
-////            int3 local_voxel = voxelPosition(x,y,z);
-////            tsdfvh::Voxel &voxel=hashTable.GetVoxel(block_idx,local_voxel);
-////            voxel=v;
-//        }
-
-        //Get SDF data
-        __device__
-        float2 getData(int x, int y, int z) const
-        {
-            return make_float2(0,0);
-//            tsdfvh::Voxel v=getVoxel(x, y, z);
-//            float2 ret=make_float2(v.getTsdf(),v.getWeight());
-
-//            return ret;
-        }
-
-        __device__
-        float2 operator[](const int3 & pos) const
-        {
-            return getData(pos.x,pos.y,pos.z);
-        }
-
-        __device__
-        float2 operator[](const uint3 & pos) const
-        {
-            return getData(pos.x,pos.y,pos.z);
         }
 
         __device__
@@ -275,25 +248,7 @@ class Volume
                 return 1;
             }
             return v->getTsdf();
-            //return getData(pos.x, pos.y, pos.z).x;
         }
-
-        __device__
-        float vw(const int3 & pos) const
-        {
-            return getData(pos.x, pos.y, pos.z).y;
-        }
-
-
-        __device__
-        float vww(const int3 & pos) const
-        {
-            short w=getData(pos.x, pos.y, pos.z).y;
-            if(w>0)
-                return 1.0;
-            return 0.0;
-        }
-
 
         //Get Color data
         __device__
@@ -363,21 +318,10 @@ class Volume
             const Fptr fp = &Volume::vs;
             return generic_interp(pos,fp) ;
         }
-        
-        __device__
-        float w_interp(const float3 & pos) const
-        {
-            const Fptr fp = &Volume::vw;
-            return generic_interp(pos,fp);
-        }
-        
-        __device__
-        float ww_interp(const float3 & pos) const
-        {
-            const Fptr fp = &Volume::vww;
-            return generic_interp(pos,fp);
-        }
 
+        __forceinline__ __device__
+        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx) const;
+        
         __device__
         float3 rgb_interp(const float3 &p) const
         {
@@ -402,13 +346,11 @@ class Volume
 
         void init()
         {
-            hashTable.Init(params.num_buckets,
-                           params.bucket_size,
-                           params.block_size);
+            hashTable.Init(num_of_buckets,
+                           bucket_size,
+                           block_size);
             clearData();
             printCUDAError();
-
-            printf("Init\n");
         }
 
         void clearData()
@@ -416,25 +358,64 @@ class Volume
             hashTable.setEmpty();
         }
         
-        void initDataFromCpu(VolumeCpu volCpu)
+        void initDataFromCpu(const VolumeCpu &volCpu)
         {
-//            uint size=_resolution.x * _resolution.y * _resolution.z;
-//            cudaMemcpy(voxels, volCpu.voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyHostToDevice);
+            num_of_buckets=volCpu.num_of_buckets;
+            bucket_size=volCpu.bucket_size;
+            block_size=volCpu.block_size;
+
+            hashTable.Init(num_of_buckets,
+                           bucket_size,
+                           block_size);
+
+            cudaMemcpy((void*)hashTable.entries_,
+                       volCpu.entries,
+                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
+                       cudaMemcpyHostToDevice );
+
+            cudaMemcpy((void*)hashTable.heap_->heap_,
+                       volCpu.heap,
+                       hashTable.heap_size_*sizeof(uint),
+                       cudaMemcpyHostToDevice );
+
+            cudaMemcpy((void*)hashTable.voxels_,
+                       volCpu.voxels,
+                       hashTable.num_entries_*block_size*block_size*block_size*sizeof(tsdfvh::Voxel),
+                       cudaMemcpyHostToDevice );
+
+            //hashTable.setEmpty();
         }
 
         void getCpuData(VolumeCpu &v)
         {
-//            uint size=_resolution.x * _resolution.y * _resolution.z;
-//            cudaMemcpy(v.voxels, voxels, size*sizeof(tsdfvh::Voxel), cudaMemcpyDeviceToHost);
+            v.block_size=block_size;
+            v.num_of_buckets=num_of_buckets;
+            v.bucket_size=bucket_size;
+
+            v.entries=new tsdfvh::HashEntry[hashTable.num_entries_];
+            v.heap=new uint[hashTable.heap_size_];
+            v.voxels=new tsdfvh::Voxel[hashTable.num_entries_*block_size*block_size*block_size];
+
+            cudaMemcpy(v.entries,
+                       (void*)hashTable.entries_,
+                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
+                       cudaMemcpyDeviceToHost );
+            cudaMemcpy(v.heap,
+                       (void*)hashTable.heap_->heap_,
+                       hashTable.heap_size_*sizeof(uint),
+                       cudaMemcpyDeviceToHost );
+            cudaMemcpy(v.voxels,
+                       (void*)hashTable.voxels_,
+                       hashTable.num_entries_*block_size*block_size*block_size*sizeof(tsdfvh::Voxel),
+                       cudaMemcpyDeviceToHost );
         }
         
         __host__ __device__ __forceinline__ 
         bool isPointInside(const float3 &pos) const
         {
-            float3 vsize=getSizeInMeters();  
-            if( pos.x<0 || pos.x >= vsize.x ||
-                pos.y<0 || pos.x >= vsize.y ||
-                pos.z<0 || pos.x >= vsize.z)
+            if( pos.x<0 || pos.x >= getDimensions().x ||
+                pos.y<0 || pos.x >= getDimensions().y ||
+                pos.z<0 || pos.x >= getDimensions().z)
             {
                 return false;
             }
@@ -457,19 +438,6 @@ class Volume
         {
             hashTable.Free();
         }
-
-    private:
-
-        uint3 _resolution;
-        uint3 block_resolution;
-        float3 dim;
-        float3 voxelSize;
-        int3 _offset;
-
-        tsdfvh::Voxel dummyVoxel;
-
-        tsdfvh::HashTable hashTable;
-
 };
 
 //Usefull functions

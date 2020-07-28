@@ -8,7 +8,7 @@
 #include<stdint.h>
 #include<iostream>
 
-
+#include<fstream>
 //static bool firstAcquire = true;
 dim3 imageBlock = dim3(32, 16);
 dim3 raycastBlock = dim3(32, 8);
@@ -20,8 +20,8 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     lastKeyFrame(0),
     lastFrame(0),
     volume(par),
-    keyFrameVol(par),
-    fusionVol(par)
+    keyFrameVol(par)
+    //fusionVol(par)
 {
     uint3 vr = make_uint3(params.volume_resolution.x,
                           params.volume_resolution.y,
@@ -78,7 +78,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     printCUDAError();
     volume.init();
     keyFrameVol.init();
-    fusionVol.init();
+    //fusionVol.init();
 
 //    TICK("initVolume");
 //    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
@@ -134,7 +134,7 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
 {
     _frame++;
     lastFrame=frame_id;
-    std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
+    //std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
     _tracked=tracking(frame_id);
@@ -286,23 +286,21 @@ bool KFusion::tracking(uint frame)
 
 bool KFusion::initKeyFrame(uint frame)
 {
-    return false;
     if(frame>0)
     {
         VolumeCpu v;
         v.frame=lastKeyFrameIdx;
         v.pose=lastKeyFramePose;
         
-        uint size=params.volume_resolution.x*params.volume_resolution.y*params.volume_resolution.z;
-        
-        v.voxels=new tsdfvh::Voxel[size];
+        keyFrameVol.getCpuData(v);
+
         if(v.voxels==nullptr)
         {
             std::cerr<<"Error allocating memory."<<std::endl;
             exit(1);
         }
 
-        keyFrameVol.getCpuData(v);
+
         volumes.push_back(v);
     }
     
@@ -312,7 +310,8 @@ bool KFusion::initKeyFrame(uint frame)
 //     lastKeyFramePose(1,3)-=params.volume_direction.y;
 //     lastKeyFramePose(2,3)-=params.volume_direction.z;
             
-    dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
+    //dim3 grid=divup(dim3(keyFrameVol.getResolution().x, keyFrameVol.getResolution().y), imageBlock);
+
     keyFrameVol.clearData();
     //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
     lastKeyFrame=frame;
@@ -327,35 +326,56 @@ bool KFusion::fuseVolumes()
     volume.clearData();
     //initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
     printCUDAError();        
-    
+    cudaDeviceSynchronize();
+
     for(int i=0;i<volumes.size();i++)
     { 
-        VolumeCpu &v=volumes[i];  
+        printf("Fusing volume:%d\n",i);
+
+        Volume fusionVol(params);
+//        std::cout<<volume.getResolution().x<<','
+//                 <<volume.getResolution().y<<','
+//                 <<volume.getResolution().z<<std::endl;
+
+//        std::cout<<fusionVol.getBlockSize()<<" "
+//                 <<fusionVol.getBucketSize()<<" "
+//                 <<fusionVol.getNumOfBuckets()<<std::endl;
+
+
+
+
+
+
+        VolumeCpu &v=volumes[i];
         fusionVol.initDataFromCpu(v);
+
         fuseVolumesKernel<<<grid, imageBlock>>>(volume,
                                                 fusionVol,
                                                 inverse(v.pose),
                                                 params.volume_direction,
                                                 maxweight);
-        printCUDAError(); 
+        cudaDeviceSynchronize();
+        printCUDAError();
+        fusionVol.release();
+
     }
-    
-    //initVolumeKernel<<<grid, imageBlock>>>(keyFrameVol, make_float2(1.0f, 0.0f));
-    
+
     return true;
 }
 
 bool KFusion::fuseLastKeyFrame(sMatrix4 &pose)
 {
-     std::cout<<"Fusing last volume"<<std::endl;
+    std::cout<<"Fusing last volume"<<std::endl;
     dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
-//    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
+
     lastKeyFramePose=pose;
+
     fuseVolumesKernel<<<grid, imageBlock>>>(volume,
                                             keyFrameVol,
                                             inverse(lastKeyFramePose),
                                             params.volume_direction,
                                             maxweight);  
+    cudaDeviceSynchronize();
     printCUDAError();
     return true;
 }
@@ -367,6 +387,8 @@ void KFusion::clearKeyFramesData()
         VolumeCpu &v=volumes[i];
         
         delete[] v.voxels;
+        delete[] v.entries;
+        delete[] v.heap;
     }
     volumes.clear();
 }
@@ -415,8 +437,7 @@ bool KFusion::raycasting(uint frame)
 }
 
 void KFusion::integrateKeyFrameData()
-{
-    return;
+{    
     sMatrix4 delta=inverse(lastKeyFramePose)*pose;
         
     delta(0,3)+=params.volume_direction.x;
@@ -599,6 +620,20 @@ bool KFusion::checkPoseKernel(sMatrix4 & pose,
 }
 
 void KFusion::getVolumeData(short2 *cpu_data)
+{
+//    int size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z*sizeof(short2);
+//    short2 *gpu_data;
+//    cudaMalloc(&gpu_data, size);
+
+//    dim3 grid=divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
+//    getVoxelData<<<grid, imageBlock>>>(volume,gpu_data);
+
+//    cudaMemcpy(cpu_data, gpu_data,size, cudaMemcpyDeviceToHost);
+//    cudaFree(gpu_data);
+    getVolumeData(cpu_data,volume);
+}
+
+void KFusion::getVolumeData(short2 *cpu_data, Volume &volume)
 {
     int size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z*sizeof(short2);
     short2 *gpu_data;

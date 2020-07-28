@@ -102,9 +102,14 @@ class KFusion
         void dropKeyFrame(int val);
         
         bool fuseLastKeyFrame(sMatrix4 &pose);
+        void getVolumeData(short2 *cpu_data, Volume &volume);
 
         void getVolumeData(short2 *cpu_data);
         
+        int getLastKeyFrameIdx() const
+        {
+            return lastKeyFrameIdx;
+        }
     private:
         int _frame;
         bool _tracked;
@@ -128,7 +133,7 @@ class KFusion
 
         Volume volume;
         Volume keyFrameVol;
-        Volume fusionVol;
+        //Volume fusionVol;
 
         int lastKeyFrame;
         int lastFrame;

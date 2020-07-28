@@ -26,11 +26,6 @@ void HashTable::Init(int num_buckets,
 
     heap_size_=num_entries_-num_buckets;
 
-    printf("block_size:%d\n",block_size);
-    printf("num_entries_:%d\n",num_entries_);
-    printf("heap_size_:%d\n",heap_size_);
-    printf("vsize:%d\n",vsize);
-
     cudaMalloc( &entries_, sizeof(HashEntry)*num_entries_);
     cudaMalloc( &voxels_, sizeof(Voxel)*vsize);
 
@@ -44,17 +39,13 @@ void HashTable::setEmpty()
     int thread_blocks = (num_entries_ + threads_per_block ) / threads_per_block;
 
     int vsize=block_size_*block_size_*block_size_*num_entries_;
-
-    printf("initEntriesKernel\n");
     initEntriesKernel<<<(num_entries_+THREADS_PER_BLOCK)/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(entries_,num_entries_);
     printCUDAError();
 
-    printf("initHeapKernel\n");
     thread_blocks = (heap_size_ + threads_per_block ) / threads_per_block;
     initHeapKernel<<<thread_blocks, threads_per_block>>>(heap_, heap_size_,num_buckets_);
     printCUDAError();
 
-    printf("initVoxelsKernel\n");
     initVoxelsKernel<<<(vsize+THREADS_PER_BLOCK)/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(voxels_,vsize);
     printCUDAError();
 

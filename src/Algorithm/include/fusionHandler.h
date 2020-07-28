@@ -29,6 +29,9 @@ class FusionHandler
         void saveVolume(const char *filename) const;
 
         void saveHash(const char *filename) const;
+
+        int getLastKeyFrameIdx() const;
+
         
     private:
         KFusion *_fusion;

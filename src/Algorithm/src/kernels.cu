@@ -5,7 +5,7 @@
 #include"constant_parameters.h"
 #include"rgb2Lab.h"
 #include"tsdfvh/voxel.h"
-// #define USE_LAB
+
 
 __global__ void getVoxelData(Volume vol, short2 *output)
 {
@@ -167,19 +167,20 @@ __global__ void fuseVolumesKernel(Volume dstVol,
                                   const sMatrix4 pose,
                                   const float3 origin,
                                   const float maxweight)
-{
-    uint3 pix = make_uint3(thr2pos2());
+{    
+    int3 pix = make_int3(thr2pos2i());
 
-    if( pix.x >= dstVol.getResolution().x ||
+    if( pix.x<0 || pix.y< 0||
+        pix.x >= dstVol.getResolution().x ||
         pix.y >= dstVol.getResolution().y )
     {
         return;
     }
 
-    float3 vsize=srcVol.getSizeInMeters();
+    float3 vsize=srcVol.getDimensions();
 
-
-
+    int srcBlockIdx=-1;
+    int dstBlockIdx=-1;
     for (pix.z = 0; pix.z < dstVol.getResolution().z; pix.z++)
     {
         float3 pos=dstVol.pos(pix);
@@ -197,35 +198,40 @@ __global__ void fuseVolumesKernel(Volume dstVol,
              continue;
         }
 
-        float tsdf=srcVol.interp(pos);
+        tsdfvh::Voxel srcVoxel=srcVol.getVoxelInterp(pos,srcBlockIdx);
 
-        float3 fcol=srcVol.rgb_interp(pos);
-        //float w_interp=srcVol.ww_interp(pos);
+        if(srcVoxel.getTsdf()==1.0)
+        {
+            continue;
+        }
+
+        voxel_t *dstVoxel=dstVol.insertVoxel(pix,dstBlockIdx);
+
+        float3 fcol=srcVoxel.getColor();
         float w_interp=1;
 
-//         if(w_interp < 1.0)
-//         {
-//             continue;
-//         }
-
-        float2 p_data = dstVol[pix];
-        float3 p_color = dstVol.getColor(pix);
-
-        if(tsdf == 1.0)
+        if(dstVoxel==nullptr)
+        {
             continue;
+        }
 
-        float w=p_data.y;
+        float w=dstVoxel->getWeight();
+        float tsdf=dstVoxel->getTsdf();
+        float3 p_color=dstVoxel->getColor();
+
         float new_w=w+w_interp;
+
+        tsdf = clamp( (w*tsdf+w_interp*srcVoxel.getTsdf()) / new_w, -1.f, 1.f);
 
         fcol.x = (w*p_color.x + w_interp*fcol.x ) / new_w;
         fcol.y = (w*p_color.y + w_interp*fcol.y ) / new_w;
         fcol.z = (w*p_color.z + w_interp*fcol.z ) / new_w;
 
-        p_data.x = clamp( (w*p_data.x + w_interp*tsdf) / new_w, -1.f, 1.f);
-        p_data.y=fminf(new_w, maxweight);
+        new_w=fminf(new_w, maxweight);
 
-//        dstVol.set(pix,p_data, fcol);
-
+        dstVoxel->setColor(fcol);
+        dstVoxel->setTsdf(tsdf);
+        dstVoxel->setWeight(new_w);
     }
 }
 
@@ -245,13 +251,15 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
 
     if(pix.x>=vol.getResolution().x || pix.y>=vol.getResolution().y)
     {
-        printf("pixel out of bound.\n");
+        //printf("pixel out of bound.\n");
         return;
     }
+
 
     int blockIdx=-1;
     for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++, pos += delta, cameraX +=cameraDelta)
     {
+
         if (pos.z < 0.0001f) // some near plane constraint
             continue;
 
@@ -323,21 +331,21 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
     }
 }
 
-__global__ void compareRgbKernel(const Image<uchar3> image1,
-                                 const Image<uchar3> image2,
-                                 Image<float>out)
-{
-    const uint2 pixel = thr2pos2();
+//__global__ void compareRgbKernel(const Image<uchar3> image1,
+//                                 const Image<uchar3> image2,
+//                                 Image<float>out)
+//{
+//    const uint2 pixel = thr2pos2();
 
-    uchar3 pix1=image1[pixel];
-    uchar3 pix2=image2[pixel];
+//    uchar3 pix1=image1[pixel];
+//    uchar3 pix2=image2[pixel];
 
-    float dist=sqrt((float) sq(pix1.x-pix2.x) +
-                    (float) sq(pix1.y-pix2.y) +
-                    (float) sq(pix1.z-pix2.z) );
+//    float dist=sqrt((float) sq(pix1.x-pix2.x) +
+//                    (float) sq(pix1.y-pix2.y) +
+//                    (float) sq(pix1.z-pix2.z) );
 
-    out[pixel]=dist;
-}
+//    out[pixel]=dist;
+//}
 
 __global__ void depth2vertexKernel(Image<float3> vertex,const Image<float> depth, const sMatrix4 invK)
 {
