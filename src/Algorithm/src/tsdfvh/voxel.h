@@ -24,7 +24,7 @@ class Voxel
         __device__ inline
         void setWeight(float w)
         {
-            weight=static_cast<short>(w);
+            weight=static_cast<short>(w+0.5);
         }
 
         __device__ inline

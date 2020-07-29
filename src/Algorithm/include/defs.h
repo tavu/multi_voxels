@@ -7,7 +7,7 @@
 
 
 //#define SAVE_VOLUMES_FRAME 
-//#define SAVE_VOXELS_TO_FILE
+#define SAVE_VOXELS_TO_FILE
 
 #endif
 

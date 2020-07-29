@@ -191,7 +191,7 @@ __global__ void fuseVolumesKernel(Volume dstVol,
         tsdfvh::Voxel srcVoxel;
         srcVol.getVoxelInterp(pos,srcBlockIdx,srcVoxel,true);
 
-        if(srcVoxel.getTsdf()==1.0)
+        if(srcVoxel.getWeight()==0)
         {
             continue;
         }
@@ -199,7 +199,8 @@ __global__ void fuseVolumesKernel(Volume dstVol,
         voxel_t *dstVoxel=dstVol.insertVoxel(pix,dstBlockIdx);
 
         float3 fcol=srcVoxel.getColor();
-        float w_interp=1;
+        //float w_interp=1;
+        float w_interp=srcVoxel.getWeight();
 
         if(dstVoxel==nullptr)
         {
