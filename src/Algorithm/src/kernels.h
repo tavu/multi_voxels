@@ -57,10 +57,6 @@ __global__ void trackAndReduce(float * out,
                                const float dist_threshold,
                                const float normal_threshold);
 
-__global__ void compareVertexKernel(Image<float3> vertex1,
-                                    Image<float3> vertex2,
-                                    Image<float>out);
-
 __global__ void renderRgbKernel(Image<uchar3> render,
                                 const Volume volume,
                                 Image<float3> vert,
@@ -127,7 +123,7 @@ __global__ void copyVolumeData(uint3 *posArray, const Volume volume, float *dest
 __global__ void copyVolumeData2(uint3 *posArray, const Volume volume,
                                 float *dest, char *isEmpty);
 
-__global__ void renderVolumeKernel2(Image<uchar3> render,
+__global__ void renderVolumeKernelGray(Image<uchar3> render,
                                    Image<float3> vertex,
                                    Image<float3> normal,
                                    const float3 light,

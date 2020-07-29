@@ -14,7 +14,6 @@ __global__ void getVoxelData(Volume vol, short2 *output)
     for (pix.z = 0; pix.z < vol.getResolution().z; pix.z++)
     {
         int idx= pix.x + pix.y * vol.getResolution().x + pix.z * vol.getResolution().x * vol.getResolution().y;
-//        float2 p_data = vol[pix];
         voxel_t *v=vol.getVoxel(pix,blockIdx);
         if(v!=nullptr)
         {
@@ -71,7 +70,7 @@ __global__ void renderVolumeKernel(Image<uchar3> render,
     }
 }
 
-__global__ void renderVolumeKernel2(Image<uchar3> render,
+__global__ void renderVolumeKernelGray(Image<uchar3> render,
                                    Image<float3> vertex,
                                    Image<float3> normal,
                                    const float3 light,
@@ -119,15 +118,6 @@ __global__ void vertex2depthKernel(Image<float> render,
         render.el() = depth;
     }
 }
-
-//__global__ void initVolumeKernel(Volume volume,const float2 val)
-//{
-//    uint3 pos = make_uint3(thr2pos2());
-//    for (pos.z=0; pos.z < volume.getResolution().z; pos.z++)
-//    {
-//        volume.set(pos, val);
-//    }
-//}
 
 __global__ void raycastKernel(Image<float3> pos3D,
                               Image<float3> normal,
@@ -330,22 +320,6 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
         }
     }
 }
-
-//__global__ void compareRgbKernel(const Image<uchar3> image1,
-//                                 const Image<uchar3> image2,
-//                                 Image<float>out)
-//{
-//    const uint2 pixel = thr2pos2();
-
-//    uchar3 pix1=image1[pixel];
-//    uchar3 pix2=image2[pixel];
-
-//    float dist=sqrt((float) sq(pix1.x-pix2.x) +
-//                    (float) sq(pix1.y-pix2.y) +
-//                    (float) sq(pix1.z-pix2.z) );
-
-//    out[pixel]=dist;
-//}
 
 __global__ void depth2vertexKernel(Image<float3> vertex,const Image<float> depth, const sMatrix4 invK)
 {
@@ -649,22 +623,6 @@ __global__ void reduceKernel(float * out, const Image<TrackData> J,const uint2 s
             S[0][sline] += S[i][sline];
         out[sline + blockIdx.x * 32] = S[0][sline];
     }
-}
-
-__global__ void compareVertexKernel(Image<float3> vertex1,
-                                    Image<float3> vertex2,
-                                    Image<float>out)
-{
-    const uint2 pixel = thr2pos2();
-
-    float3 pix1=vertex1[pixel];
-    float3 pix2=vertex2[pixel];
-
-    float dist=sqrt((float) sq(pix1.x-pix2.x) +
-                    (float) sq(pix1.y-pix2.y) +
-                    (float) sq(pix1.z-pix2.z) );
-
-    out[pixel]=dist;
 }
 
 
