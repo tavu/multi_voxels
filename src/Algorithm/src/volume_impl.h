@@ -11,10 +11,14 @@ tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useCol
                                           (pos.y * getResolution().y / getDimensions().y) - 0.5f,
                                           (pos.z * getResolution().z / getDimensions().z) - 0.5f);
 
+    const int3 max_voxel=make_int3(getResolution().x - 1,
+                                   getResolution().y - 1,
+                                   getResolution().z - 1);
+
     const int3 base = make_int3(floorf(scaled_pos));
     const float3 factor = fracf(scaled_pos);
-    const int3 lower = max(base, _offset);
-    const int3 upper = min(base + make_int3(1),maxVoxel() - make_int3(1));
+    const int3 lower = max(base, make_int3(0));
+    const int3 upper = min(base + make_int3(1),max_voxel);
 
     voxel_t *v[8];
 
@@ -106,14 +110,18 @@ float3 Volume::grad(const float3 & pos) const
     const int3 base = make_int3(floorf(scaled_pos));
     const float3 factor = fracf(scaled_pos);
 
-    const int3 lower_lower = max(base - make_int3(1), _offset);
-    const int3 lower_upper = max(base, _offset);
+    const int3 max_voxel=make_int3(getResolution().x - 1,
+                                   getResolution().y - 1,
+                                   getResolution().z - 1);
+
+    const int3 lower_lower = max(base - make_int3(1), make_int3(0));
+    const int3 lower_upper = max(base, make_int3(0));
 
     const int3 upper_lower = min(base + make_int3(1),
-                                 maxVoxel() - make_int3(1));
+                                 max_voxel);
 
     const int3 upper_upper = min(base + make_int3(2),
-                                 maxVoxel() - make_int3(1));
+                                 max_voxel);
 
     const int3 & lower = lower_upper;
     const int3 & upper = upper_lower;

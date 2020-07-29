@@ -41,7 +41,6 @@ class Volume
         uint3 _resolution;
         float3 dim;
         float3 voxelSize;
-        int3 _offset;
         tsdfvh::HashTable hashTable;
         int block_size;
         int bucket_size;
@@ -55,7 +54,6 @@ class Volume
             dim = params.volume_size;
 
             voxelSize=dim/_resolution;
-            _offset=make_int3(0,0,0);
 
             block_size=params.block_size;
             bucket_size=params.bucket_size;
@@ -107,37 +105,6 @@ class Volume
         __host__ __device__ float3 getVoxelSize() const
         {
             return voxelSize;
-        }
-
-        __host__ __device__ float3 getOffsetPos() const
-        {
-            return make_float3(_offset.x*voxelSize.x,
-                               _offset.y*voxelSize.y,
-                               _offset.z*voxelSize.z);
-        }
-
-        __host__ __device__ float3 getDimWithOffset() const
-        {
-            int3 v=maxVoxel();
-            float3 ret;
-            ret.x=(v.x)*voxelSize.x;
-            ret.y=(v.y)*voxelSize.y;
-            ret.z=(v.z)*voxelSize.z;
-            return ret;
-        }
-
-        __host__ __device__ float3 center() const
-        {
-            return make_float3(float(_resolution.x)*voxelSize.x*0.5+float(_offset.x)*voxelSize.x,
-                               float(_resolution.y)*voxelSize.x*0.5+float(_offset.y)*voxelSize.y,
-                               float(_resolution.z)*voxelSize.x*0.5+float(_offset.z)*voxelSize.z);
-        }
-
-        __host__ __device__ void addOffset(int3 off)
-        {
-            _offset.x+=off.x;
-            _offset.y+=off.y;
-            _offset.z+=off.z;
         }
 
         __host__ __device__ float3 getDimensions() const
@@ -276,18 +243,6 @@ class Volume
                 return false;
             }
             return true;
-        }
-
-        __host__ __device__ int3 minVoxel() const
-        {
-            return _offset;
-        }
-
-        __host__ __device__ int3 maxVoxel() const
-        {
-            return make_int3( int(_resolution.x)+_offset.x,
-                              int(_resolution.y)+_offset.y,
-                              int(_resolution.z)+_offset.z);
         }
 
         //free memory
