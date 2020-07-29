@@ -98,22 +98,7 @@ class Volume
           int3 position_local = make_int3(x % block_size,
                                           y % block_size,
                                           z % block_size);
-          /*
-          if (position_local.x < 0)
-              position_local.x += block_size;
-
-          if (position_local.y < 0)
-              position_local.y += block_size;
-
-          if (position_local.z < 0)
-              position_local.z += block_size;
-          */
           return position_local;
-        }
-
-        bool isNull() const
-        {
-            return false;
         }
 
         __host__ __device__ uint3 getResolution() const
@@ -126,10 +111,10 @@ class Volume
             return voxelSize;
         }
 
-        __host__ __device__ int3 getOffset() const
-        {
-            return _offset;
-        }
+//        __host__ __device__ int3 getOffset() const
+//        {
+//            return _offset;
+//        }
 
         __host__ __device__ float3 getOffsetPos() const
         {
@@ -177,6 +162,7 @@ class Volume
                                    hashTable.entries_[blockIdx].position.z);
             return ret;
         }
+
         //insert voxel
         __device__ __forceinline__
         voxel_t* insertVoxel(const int3 &pos, int &block_idx)
@@ -239,7 +225,7 @@ class Volume
         }
 
         __device__
-        float vs(const int3 & pos) const
+        float vs(const int3 &pos) const
         {
             int blockIdx=-1;
             voxel_t *v=getVoxel(pos,blockIdx);
@@ -250,52 +236,6 @@ class Volume
             return v->getTsdf();
         }
 
-        //Get Color data
-        __device__
-        float3 getColor(int x, int y, int z) const
-        {
-            int blockIdx=-1;
-            int3 pos=make_int3(x,y,z);
-            tsdfvh::Voxel *v=getVoxel(pos,blockIdx);
-            if(v==nullptr)
-            {
-                return make_float3(0.0, 0.0, 0.0);
-            }
-            return v->color;
-        }
-
-        __device__
-        float3 getColor(const int3 & pos) const
-        {
-            return getColor(pos.x, pos.y, pos.z);
-        }
-
-        __device__
-        float3 getColor(const uint3 & pos) const
-        {
-            return getColor(pos.x, pos.y, pos.z);
-        }       
-
-
-        __device__
-        float red(const int3 & pos) const
-        {
-            return getColor(pos.x, pos.y, pos.z).x;
-        }
-
-        __device__
-        float green(const int3 & pos) const
-        {
-            return getColor(pos.x, pos.y, pos.z).y;
-        }
-
-        __device__
-        float blue(const int3 & pos) const
-        {
-            return getColor(pos.x, pos.y, pos.z).z;
-        }
-
-
         __device__
         float3 pos(const int3 & p) const
         {
@@ -304,63 +244,30 @@ class Volume
                                 ( (p.z + 0.5f) * voxelSize.z));
         }
 
-        __device__
-        float3 pos(const uint3 & p) const
-        {
-            return make_float3( ( (p.x + 0.5f) * voxelSize.x),
-                                ( (p.y + 0.5f) * voxelSize.y),
-                                ( (p.z + 0.5f) * voxelSize.z));
-        }
-
-        __device__
-        float interp(const float3 & pos) const
-        {
-            const Fptr fp = &Volume::vs;
-            return generic_interp(pos,fp) ;
-        }
-
         __forceinline__ __device__
-        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor=true) const;
-        
-//        __device__
-//        float3 rgb_interp(const float3 &p) const
-//        {
-//            float3 pos=p;
-
-//            float3 rgb;
-//            const Fptr red_ptr = &Volume::red;
-//            rgb.x=generic_interp(pos,red_ptr);
-
-//            const Fptr green_ptr = &Volume::green;
-//            rgb.y=generic_interp(pos,green_ptr);
-
-//            const Fptr blue_ptr = &Volume::blue;
-//            rgb.z=generic_interp(pos,blue_ptr);
-//            return rgb;
-//        }
-
-        __device__
-        float generic_interp(const float3 & pos,const Fptr fp) const;
+        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor=true) const;       
 
         __device__ float3 grad(const float3 & pos) const;
 
         void init()
         {
-            std::cout<<"init volume"<<std::endl;
+            //allocate hash memory
             hashTable.Init(num_of_buckets,
                            bucket_size,
                            block_size);
 
-            std::cout<<"Set hash table as empty"<<std::endl;
+            //Set hash table as empty
             clearData();
             printCUDAError();
         }
 
+        //Sets hash table as empty
         void clearData()
         {
             hashTable.setEmpty();
         }
         
+        //Initialize volume from CPU memory
         void initDataFromCpu(const VolumeCpu &volCpu)
         {
             num_of_buckets=volCpu.num_of_buckets;
@@ -385,10 +292,9 @@ class Volume
                        volCpu.voxels,
                        hashTable.num_entries_*block_size*block_size*block_size*sizeof(tsdfvh::Voxel),
                        cudaMemcpyHostToDevice );
-
-            //hashTable.setEmpty();
         }
 
+        //Store volume to CPU memory
         void getCpuData(VolumeCpu &v)
         {
             v.block_size=block_size;
@@ -437,6 +343,7 @@ class Volume
                               int(_resolution.z)+_offset.z);
         }
 
+        //free memory
         void release()
         {
             hashTable.Free();
