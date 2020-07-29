@@ -205,7 +205,10 @@ class Volume
         }
 
         __forceinline__ __device__
-        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor=true) const;       
+        int getVoxelInterp(const float3 &pos,
+                           int &blockIdx,
+                           tsdfvh::Voxel &out,
+                           bool useColor=true) const;
 
         __device__ float3 grad(const float3 & pos) const;
 

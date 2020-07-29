@@ -62,7 +62,12 @@ __device__ __forceinline__ float4 raycast(const Volume volume,
         // first walk with largesteps until we found a hit
         float t = tnear;
         float stepsize = largestep;
-        tsdfvh::Voxel v=volume.getVoxelInterp(origin + direction * t,blockIdx,false);
+        tsdfvh::Voxel v;
+        volume.getVoxelInterp(origin + direction * t,
+                              blockIdx,
+                              v,
+                              false);
+
         float f_t = v.getTsdf();
         float f_tt = 0;
 
@@ -70,7 +75,10 @@ __device__ __forceinline__ float4 raycast(const Volume volume,
         {
             for (; t < tfar; t += stepsize)
             {
-                v=volume.getVoxelInterp(origin + direction * t,blockIdx,false);
+                volume.getVoxelInterp(origin + direction * t,
+                                      blockIdx,
+                                      v,
+                                      false);
                 f_tt=v.getTsdf();
                 //f_tt = volume.interp(origin + direction * t);
                 if (f_tt < 0)                  // got it, jump out of inner loop

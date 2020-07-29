@@ -188,7 +188,8 @@ __global__ void fuseVolumesKernel(Volume dstVol,
              continue;
         }
 
-        tsdfvh::Voxel srcVoxel=srcVol.getVoxelInterp(pos,srcBlockIdx);
+        tsdfvh::Voxel srcVoxel;
+        srcVol.getVoxelInterp(pos,srcBlockIdx,srcVoxel,true);
 
         if(srcVoxel.getTsdf()==1.0)
         {
@@ -426,7 +427,8 @@ __global__ void renderRgbKernel(Image<uchar3> render,
         else
         {
             int blockIdx=-1;
-            tsdfvh::Voxel v=volume.getVoxelInterp(vertex,blockIdx,true);
+            tsdfvh::Voxel v;
+            volume.getVoxelInterp(vertex,blockIdx,v,true);
             float3 fcol = v.getColor();
 #ifdef USE_LAB
             fcol.x=clamp(flab.x,MIN_L,MAX_L);

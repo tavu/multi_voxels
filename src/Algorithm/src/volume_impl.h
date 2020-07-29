@@ -4,9 +4,11 @@
 #include"tsdfvh/voxel.h"
 
 __forceinline__ __device__
-tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor) const
+int Volume::getVoxelInterp(const float3 &pos,
+                                     int &blockIdx,
+                                     tsdfvh::Voxel &out,
+                                     bool useColor) const
 {
-    tsdfvh::Voxel ret;
     const float3 scaled_pos = make_float3((pos.x * getResolution().x / getDimensions().x) - 0.5f,
                                           (pos.y * getResolution().y / getDimensions().y) - 0.5f,
                                           (pos.z * getResolution().z / getDimensions().z) - 0.5f);
@@ -34,19 +36,23 @@ tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useCol
 
     float sdf[8];
     float3 col[8];
+    float avgW=0;
     for(int i=0;i<8;i++)
     {
         if(v[i]==nullptr)
         {
             col[i]=make_float3(0.0, 0.0, 0.0);
-            sdf[i]=1.0;
+            sdf[i]=1.0;            
         }
         else
         {
             sdf[i]=v[i]->getTsdf();
-            col[i]=v[i]->color;
+            col[i]=v[i]->getColor();
+            avgW+=v[i]->getWeight();
         }
     }
+    avgW=avgW/8;
+    out.setWeight(avgW);
 
     float tmp0 = (sdf[0] * (1 - factor.x) +
                   sdf[1] * factor.x ) * (1 - factor.y);
@@ -57,7 +63,7 @@ tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useCol
     float tmp3 = (sdf[6] * (1 - factor.x) +
                   sdf[7] * factor.x) * factor.y;
 
-    ret.setTsdf( (tmp0+tmp1) * (1 - factor.z) + (tmp2+tmp3) * factor.z );
+    out.setTsdf( (tmp0+tmp1) * (1 - factor.z) + (tmp2+tmp3) * factor.z );
 
     if(useColor)
     {
@@ -94,10 +100,10 @@ tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useCol
 
         b0=( (b0+b1) * (1 - factor.z) + (b2+b3) * factor.z ) ;
 
-        ret.setColor(make_float3(r0,g0,b0));
+        out.setColor(make_float3(r0,g0,b0));
     }
 
-    return ret;
+    return 0;
 }
 
 
