@@ -21,8 +21,6 @@ struct VolumeCpu
 {
     uint frame;
     sMatrix4 pose;
-    //uint3 resolution;
-    //float3 dimensions;
 
     int bucket_size;
     int num_of_buckets;
@@ -110,11 +108,6 @@ class Volume
         {
             return voxelSize;
         }
-
-//        __host__ __device__ int3 getOffset() const
-//        {
-//            return _offset;
-//        }
 
         __host__ __device__ float3 getOffsetPos() const
         {
@@ -268,56 +261,10 @@ class Volume
         }
         
         //Initialize volume from CPU memory
-        void initDataFromCpu(const VolumeCpu &volCpu)
-        {
-            num_of_buckets=volCpu.num_of_buckets;
-            bucket_size=volCpu.bucket_size;
-            block_size=volCpu.block_size;
-
-            hashTable.Init(num_of_buckets,
-                           bucket_size,
-                           block_size);
-
-            cudaMemcpy((void*)hashTable.entries_,
-                       volCpu.entries,
-                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
-                       cudaMemcpyHostToDevice );
-
-            cudaMemcpy((void*)hashTable.heap_.heap_,
-                       volCpu.heap,
-                       hashTable.heap_size_*sizeof(uint),
-                       cudaMemcpyHostToDevice );
-
-            cudaMemcpy((void*)hashTable.voxels_,
-                       volCpu.voxels,
-                       hashTable.num_entries_*block_size*block_size*block_size*sizeof(tsdfvh::Voxel),
-                       cudaMemcpyHostToDevice );
-        }
+        void initDataFromCpu(const VolumeCpu &volCpu);
 
         //Store volume to CPU memory
-        void getCpuData(VolumeCpu &v)
-        {
-            v.block_size=block_size;
-            v.num_of_buckets=num_of_buckets;
-            v.bucket_size=bucket_size;
-
-            v.entries=new tsdfvh::HashEntry[hashTable.num_entries_];
-            v.heap=new uint[hashTable.heap_size_];
-            v.voxels=new tsdfvh::Voxel[hashTable.num_entries_*block_size*block_size*block_size];
-
-            cudaMemcpy(v.entries,
-                       (void*)hashTable.entries_,
-                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
-                       cudaMemcpyDeviceToHost );
-            cudaMemcpy(v.heap,
-                       (void*)hashTable.heap_.heap_,
-                       hashTable.heap_size_*sizeof(uint),
-                       cudaMemcpyDeviceToHost );
-            cudaMemcpy(v.voxels,
-                       (void*)hashTable.voxels_,
-                       hashTable.num_entries_*block_size*block_size*block_size*sizeof(tsdfvh::Voxel),
-                       cudaMemcpyDeviceToHost );
-        }
+        void getCpuData(VolumeCpu &v);
         
         __host__ __device__ __forceinline__ 
         bool isPointInside(const float3 &pos) const
