@@ -7,7 +7,7 @@ namespace tsdfvh
 {
 __global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries);
 
-__global__ void initHeapKernel(Heap *heap,
+__global__ void initHeapKernel(Heap heap,
                                int num_blocks, int num_buckets);
 __global__ void initVoxelsKernel(voxel_t *voxels, int size );
 
@@ -28,9 +28,7 @@ void HashTable::Init(int num_buckets,
 
     cudaMalloc( &entries_, sizeof(HashEntry)*num_entries_);
     cudaMalloc( &voxels_, sizeof(Voxel)*vsize);
-
-    cudaMallocManaged(&heap_, sizeof(Heap));
-    heap_->Init(heap_size_);
+    heap_.Init(heap_size_);
 }
 
 void HashTable::setEmpty()
@@ -48,22 +46,13 @@ void HashTable::setEmpty()
 
     initVoxelsKernel<<<(vsize+THREADS_PER_BLOCK)/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(voxels_,vsize);
     printCUDAError();
-
-//    voxel_t *v=new voxel_t[vsize];
-//    cudaMemcpy(v,voxels_,vsize*sizeof(voxel_t),cudaMemcpyDeviceToHost);
-
-//    for(int i=0;i<vsize;i++)
-//    {
-//        printf("(%d,%d) (%f,%f,%f)\n",v[i].sdf,v[i].weight,v[i].color.x,v[i].color.y,v[i].color.z );
-//    }
-
 }
 
 void HashTable::Free()
 {
     cudaFree( (void*)entries_);
     cudaFree( (void*)voxels_);
-    cudaFree(heap_);
+    //cudaFree(heap_);
 }
 
 __global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries)
@@ -78,17 +67,17 @@ __global__ void initEntriesKernel(volatile HashEntry *entries, int num_entries)
      }
 }
 
-__global__ void initHeapKernel(Heap *heap,int heap_size_, int num_buckets)
+__global__ void initHeapKernel(Heap heap,int heap_size_, int num_buckets)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index == 0)
     {
-        heap->heap_counter_ = heap_size_ - 1;
+        heap.setCounter(heap_size_ - 1);        
     }
 
     if(index<heap_size_)
     {
-        heap->heap_[index] = index + num_buckets ;
+        heap.heap_[index] = index + num_buckets ;
     }
 }
 

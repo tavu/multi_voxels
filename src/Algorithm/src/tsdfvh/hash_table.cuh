@@ -53,7 +53,7 @@ int HashTable::AllocateBlock(const int3 &position)
                 int mutex = atomicCAS( (int*)  &entry.next_ptr, kTailEntry, kLockEntry);
                 if (mutex == kTailEntry)
                 {
-                    int next_ptr=heap_->Consume();
+                    int next_ptr=heap_.Consume();
 
                     entries_[next_ptr].position.x = position.x;
                     entries_[next_ptr].position.y = position.y;

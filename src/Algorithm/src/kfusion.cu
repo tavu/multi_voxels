@@ -23,6 +23,8 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     keyFrameVol(par)
     //fusionVol(par)
 {
+    std::cout<<"Init kfusion"<<std::endl;
+
     uint3 vr = make_uint3(params.volume_resolution.x,
                           params.volume_resolution.y,
                           params.volume_resolution.z);
@@ -30,6 +32,8 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     float3 vd = make_float3(params.volume_size.x,
                             params.volume_size.y,
                             params.volume_size.z);
+
+
 
     pose = initPose;
     oldPose=pose;
@@ -46,9 +50,8 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     viewPose = &pose;
 
     uint2 cs = make_uint2(params.computationSize.x, params.computationSize.y);
-    std::cout<<"CS:"<<cs.x<<","<<cs.y<<std::endl;
 
-    std::cout<<"KAM"<<std::endl;
+    std::cout<<"CAM"<<std::endl;
     std::cout<<camMatrix<<std::endl;
 
     reduction.alloc(cs);
@@ -94,6 +97,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
         cudaDeviceReset();
         exit(1);
     }
+
 }
 
 KFusion::~KFusion()
@@ -134,11 +138,17 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
 {
     _frame++;
     lastFrame=frame_id;
-    //std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
+    std::cout<<"[FRAME="<<frame_id<<"]"<<std::endl;
 
     preprocessing(inputDepth,rgb);
+    printCUDAError();
+
+
     _tracked=tracking(frame_id);
+    printCUDAError();
+
     bool integrated=integration(frame_id);
+    printCUDAError();
 
     if(!_tracked)
     {
@@ -148,7 +158,9 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
     if(isKeyFrame)
     {
         std::cout<<"[FRAME="<<frame_id<<"] Key frame."<<std::endl;
-        initKeyFrame(frame_id);        
+        initKeyFrame(frame_id);  
+        printCUDAError();
+      
     }
     
     if(!integrated)
@@ -158,9 +170,13 @@ bool KFusion::processFrame(int frame_id,const float *inputDepth, const uchar3 *r
     else
     {
         integrateKeyFrameData();
+        printCUDAError();
+
     }
 
     bool raycast=raycasting(frame_id);
+    printCUDAError();
+
     if(!raycast)
     {
         std::cerr<<"[FRAME="<<frame_id<<"] Raycast faild!"<<std::endl;
@@ -333,18 +349,6 @@ bool KFusion::fuseVolumes()
         printf("Fusing volume:%d\n",i);
 
         Volume fusionVol(params);
-//        std::cout<<volume.getResolution().x<<','
-//                 <<volume.getResolution().y<<','
-//                 <<volume.getResolution().z<<std::endl;
-
-//        std::cout<<fusionVol.getBlockSize()<<" "
-//                 <<fusionVol.getBucketSize()<<" "
-//                 <<fusionVol.getNumOfBuckets()<<std::endl;
-
-
-
-
-
 
         VolumeCpu &v=volumes[i];
         fusionVol.initDataFromCpu(v);

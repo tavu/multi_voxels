@@ -1,12 +1,19 @@
-#pragma once
+#ifndef HEAP_H
+#define HEAP_H
 
 #include <cuda_runtime.h>
+#include<iostream>
 
+#include"utils.h"
 namespace tsdfvh {
 
 /**
  * @brief      Class handling the indices of the voxel blocks.
  */
+
+/** Index of the element of heap_ that contains the next available index */
+//static __device__ volatile unsigned int heap_counter_;
+
 class Heap
 {
     public:
@@ -17,7 +24,8 @@ class Heap
         */
         inline void Init(int heap_size)
         {
-            cudaMalloc(&heap_, sizeof(unsigned int) * heap_size);
+            auto err=cudaMalloc(&heap_, sizeof(unsigned int) *( heap_size) );   
+            cudaMalloc(&heap_counter_, sizeof(unsigned int) );   
         }
 
         /**
@@ -29,7 +37,7 @@ class Heap
         __device__ inline unsigned int Consume()
         {
 #ifdef __CUDACC__
-            unsigned int idx = atomicSub(&heap_counter_, 1);
+            unsigned int idx = atomicSub( (int*)heap_counter_, 1);            
             return heap_[idx];
 #endif
         }
@@ -42,7 +50,7 @@ class Heap
         __device__ inline void Append(unsigned int ptr)
         {
 #ifdef __CUDACC__
-            unsigned int idx = atomicAdd(&heap_counter_, 1);
+            unsigned int idx = atomicAdd( (int*)heap_counter_, 1);
             heap_[idx + 1] = ptr;
 #endif
         }
@@ -50,8 +58,18 @@ class Heap
         /** Vector of the indices currently assigned */
         unsigned int *heap_;
 
-        /** Index of the element of heap_ that contains the next available index */
-        unsigned int heap_counter_;
+        __device__ void setCounter(uint n)
+        {
+                *heap_counter_=n;
+        }
+
+        __device__ uint getCounter() const
+        {
+                return *heap_counter_;
+        }
+
+        volatile uint *heap_counter_;
 };
 
 }  // namespace tsdfvh
+#endif

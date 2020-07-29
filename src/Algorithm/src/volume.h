@@ -216,7 +216,7 @@ class Volume
         void saveHeap(uint *cpudata) const
         {
             cudaMemcpy(cpudata,
-                       hashTable.heap_->heap_,
+                       hashTable.heap_.heap_,
                        hashTable.heap_size_*sizeof(uint),
                        cudaMemcpyDeviceToHost);
         }
@@ -346,9 +346,12 @@ class Volume
 
         void init()
         {
+            std::cout<<"init volume"<<std::endl;
             hashTable.Init(num_of_buckets,
                            bucket_size,
                            block_size);
+
+            std::cout<<"Set hash table as empty"<<std::endl;
             clearData();
             printCUDAError();
         }
@@ -373,7 +376,7 @@ class Volume
                        hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
                        cudaMemcpyHostToDevice );
 
-            cudaMemcpy((void*)hashTable.heap_->heap_,
+            cudaMemcpy((void*)hashTable.heap_.heap_,
                        volCpu.heap,
                        hashTable.heap_size_*sizeof(uint),
                        cudaMemcpyHostToDevice );
@@ -401,7 +404,7 @@ class Volume
                        hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
                        cudaMemcpyDeviceToHost );
             cudaMemcpy(v.heap,
-                       (void*)hashTable.heap_->heap_,
+                       (void*)hashTable.heap_.heap_,
                        hashTable.heap_size_*sizeof(uint),
                        cudaMemcpyDeviceToHost );
             cudaMemcpy(v.voxels,

@@ -110,7 +110,7 @@ class HashTable
         voxel_t *voxels_;
 
         /** Object that handles the indices of the voxel blocks */
-        Heap *heap_;
+        Heap heap_;
 
         /** Total maximum number of heap */
         int heap_size_;

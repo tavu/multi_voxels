@@ -137,14 +137,6 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
         return;
     }
 
-//    if(frame==0 )
-//    {
-//        char buf[256];
-//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-//        fusion->saveVolume(buf);
-//    }
-
-
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
@@ -173,18 +165,6 @@ void imageAndDepthCallback(const sensor_msgs::ImageConstPtr &rgb,
     {
         publishVolumeProjection();
     }
-
-
-//    if(frame==150 )
-//    {
-//        char buf[256];
-//        sprintf(buf,"/tmp/voxels/f%d_voxels",frame);
-//        fusion->saveVolume(buf);
-
-//        sprintf(buf,"/tmp/voxels/f%d_hash",frame);
-//        fusion->saveHash(buf);
-
-//    }
 }
 
 void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
