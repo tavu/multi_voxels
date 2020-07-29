@@ -24,8 +24,9 @@ class Heap
         */
         inline void Init(int heap_size)
         {
-            auto err=cudaMalloc(&heap_, sizeof(unsigned int) *( heap_size) );   
-            cudaMalloc(&heap_counter_, sizeof(unsigned int) );   
+            cudaMalloc(&heap_, sizeof(unsigned int) *( heap_size + 1) );
+            heap_counter_=heap_;
+            heap_++;
         }
 
         /**
