@@ -27,7 +27,7 @@ float Volume::generic_interp(const float3 &pos,const Fptr fp) const
 }
 
 __forceinline__ __device__
-tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx) const
+tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor) const
 {
     tsdfvh::Voxel ret;
     const float3 scaled_pos = make_float3((pos.x * getResolution().x / getDimensions().x) - 0.5f,
@@ -78,40 +78,43 @@ tsdfvh::Voxel Volume::getVoxelInterp(const float3 &pos,int &blockIdx) const
 
     ret.setTsdf( (tmp0+tmp1) * (1 - factor.z) + (tmp2+tmp3) * factor.z );
 
-    float r0 = (col[0].x * (1 - factor.x) +
-                col[1].x * factor.x ) * (1 - factor.y);
-    float r1 = (col[2].x * (1 - factor.x) +
-                col[3].x * factor.x) * factor.y ;
-    float r2 = (col[4].x * (1 - factor.x) +
-                col[5].x * factor.x) * (1 - factor.y);
-    float r3 = (col[6].x * (1 - factor.x) +
-                col[7].x * factor.x) * factor.y;
-    r0=( (r0+r1) * (1 - factor.z) + (r2+r3) * factor.z ) ;
+    if(useColor)
+    {
+        float r0 = (col[0].x * (1 - factor.x) +
+                    col[1].x * factor.x ) * (1 - factor.y);
+        float r1 = (col[2].x * (1 - factor.x) +
+                    col[3].x * factor.x) * factor.y ;
+        float r2 = (col[4].x * (1 - factor.x) +
+                    col[5].x * factor.x) * (1 - factor.y);
+        float r3 = (col[6].x * (1 - factor.x) +
+                    col[7].x * factor.x) * factor.y;
+        r0=( (r0+r1) * (1 - factor.z) + (r2+r3) * factor.z ) ;
 
 
-    float g0 = (col[0].y * (1 - factor.x) +
-                col[1].y * factor.x ) * (1 - factor.y);
-    float g1 = (col[2].y * (1 - factor.x) +
-                col[3].y * factor.x) * factor.y ;
-    float g2 = (col[4].y * (1 - factor.x) +
-                col[5].y * factor.x) * (1 - factor.y);
-    float g3 = (col[6].y * (1 - factor.x) +
-                col[7].y * factor.x) * factor.y;
-    g0=( (g0+g1) * (1 - factor.z) + (g2+g3) * factor.z ) ;
+        float g0 = (col[0].y * (1 - factor.x) +
+                    col[1].y * factor.x ) * (1 - factor.y);
+        float g1 = (col[2].y * (1 - factor.x) +
+                    col[3].y * factor.x) * factor.y ;
+        float g2 = (col[4].y * (1 - factor.x) +
+                    col[5].y * factor.x) * (1 - factor.y);
+        float g3 = (col[6].y * (1 - factor.x) +
+                    col[7].y * factor.x) * factor.y;
+        g0=( (g0+g1) * (1 - factor.z) + (g2+g3) * factor.z ) ;
 
 
-    float b0 = (col[0].z * (1 - factor.x) +
-                col[1].z * factor.x ) * (1 - factor.y);
-    float b1 = (col[2].z * (1 - factor.x) +
-                col[3].z * factor.x) * factor.y ;
-    float b2 = (col[4].z * (1 - factor.x) +
-                col[5].z * factor.x) * (1 - factor.y);
-    float b3 = (col[6].z * (1 - factor.x) +
-                col[7].z * factor.x) * factor.y;
+        float b0 = (col[0].z * (1 - factor.x) +
+                    col[1].z * factor.x ) * (1 - factor.y);
+        float b1 = (col[2].z * (1 - factor.x) +
+                    col[3].z * factor.x) * factor.y ;
+        float b2 = (col[4].z * (1 - factor.x) +
+                    col[5].z * factor.x) * (1 - factor.y);
+        float b3 = (col[6].z * (1 - factor.x) +
+                    col[7].z * factor.x) * factor.y;
 
-    b0=( (b0+b1) * (1 - factor.z) + (b2+b3) * factor.z ) ;
+        b0=( (b0+b1) * (1 - factor.z) + (b2+b3) * factor.z ) ;
 
-    ret.setColor(make_float3(r0,g0,b0));
+        ret.setColor(make_float3(r0,g0,b0));
+    }
 
     return ret;
 }

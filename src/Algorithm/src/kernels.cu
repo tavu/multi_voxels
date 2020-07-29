@@ -451,8 +451,9 @@ __global__ void renderRgbKernel(Image<uchar3> render,
         }
         else
         {
-            float3 fcol = volume.rgb_interp(vertex);
-
+            int blockIdx=-1;
+            tsdfvh::Voxel v=volume.getVoxelInterp(vertex,blockIdx,true);
+            float3 fcol = v.getColor();
 #ifdef USE_LAB
             fcol.x=clamp(flab.x,MIN_L,MAX_L);
             fcol.y=clamp(flab.y,MIN_A,MAX_A);

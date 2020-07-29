@@ -27,13 +27,6 @@ __forceinline__ __host__ __device__ void  swapf(float &f1,float &f2)
     f1=tmp;
 }
 
-
-//__forceinline__ __host__ __device__ float sq(const float x)
-//{
-//    return x * x;
-//}
-
-
 __device__ __forceinline__ float4 raycast(const Volume volume,
                                           const uint2 pos,
                                           const sMatrix4 view,
@@ -63,19 +56,23 @@ __device__ __forceinline__ float4 raycast(const Volume volume,
     const float tnear = fmaxf(largest_tmin, nearPlane);
     const float tfar = fminf(smallest_tmax, farPlane);
 
+    int blockIdx=-1;
     if (tnear < tfar)
     {
         // first walk with largesteps until we found a hit
         float t = tnear;
         float stepsize = largestep;
-        float f_t = volume.interp(origin + direction * t);
+        tsdfvh::Voxel v=volume.getVoxelInterp(origin + direction * t,blockIdx,false);
+        float f_t = v.getTsdf();
         float f_tt = 0;
 
         if (f_t > 0) // ups, if we were already in it, then don't render anything here
         {
             for (; t < tfar; t += stepsize)
             {
-                f_tt = volume.interp(origin + direction * t);
+                v=volume.getVoxelInterp(origin + direction * t,blockIdx,false);
+                f_tt=v.getTsdf();
+                //f_tt = volume.interp(origin + direction * t);
                 if (f_tt < 0)                  // got it, jump out of inner loop
                     break;
                 if (f_tt < 0.8f)               // coming closer, reduce stepsize

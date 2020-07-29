@@ -320,24 +320,24 @@ class Volume
         }
 
         __forceinline__ __device__
-        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx) const;
+        tsdfvh::Voxel getVoxelInterp(const float3 &pos,int &blockIdx,bool useColor=true) const;
         
-        __device__
-        float3 rgb_interp(const float3 &p) const
-        {
-            float3 pos=p;
+//        __device__
+//        float3 rgb_interp(const float3 &p) const
+//        {
+//            float3 pos=p;
 
-            float3 rgb;
-            const Fptr red_ptr = &Volume::red;
-            rgb.x=generic_interp(pos,red_ptr);
+//            float3 rgb;
+//            const Fptr red_ptr = &Volume::red;
+//            rgb.x=generic_interp(pos,red_ptr);
 
-            const Fptr green_ptr = &Volume::green;
-            rgb.y=generic_interp(pos,green_ptr);
+//            const Fptr green_ptr = &Volume::green;
+//            rgb.y=generic_interp(pos,green_ptr);
 
-            const Fptr blue_ptr = &Volume::blue;
-            rgb.z=generic_interp(pos,blue_ptr);
-            return rgb;
-        }
+//            const Fptr blue_ptr = &Volume::blue;
+//            rgb.z=generic_interp(pos,blue_ptr);
+//            return rgb;
+//        }
 
         __device__
         float generic_interp(const float3 & pos,const Fptr fp) const;
