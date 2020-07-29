@@ -110,7 +110,10 @@ class Volume
         __host__ __device__ float3 getDimensions() const
         {
             return dim;
-        }                
+        }
+
+#ifdef __CUDACC__
+
 
         __device__ __forceinline__
         tsdfvh::HashEntry getHashEntry(int blockIdx) const
@@ -139,32 +142,6 @@ class Volume
             if(block_idx>=0)
                 return &hashTable.GetVoxel(block_idx,local_voxel);
             return nullptr;
-        }
-
-        int getHashSize() const
-        {
-            return hashTable.num_entries_;
-        }
-
-        void saveHash(tsdfvh::HashEntry *cpudata) const
-        {
-            cudaMemcpy(cpudata,
-                       (void *)hashTable.entries_,
-                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
-                       cudaMemcpyDeviceToHost);
-        }
-
-        int getHeapSize() const
-        {
-            return hashTable.heap_size_;
-        }
-
-        void saveHeap(uint *cpudata) const
-        {
-            cudaMemcpy(cpudata,
-                       hashTable.heap_.heap_,
-                       hashTable.heap_size_*sizeof(uint),
-                       cudaMemcpyDeviceToHost);
         }
 
         //Get Voxel
@@ -211,7 +188,7 @@ class Volume
                            bool useColor=true) const;
 
         __device__ float3 grad(const float3 & pos) const;
-
+#endif
         void init()
         {
             //allocate hash memory
@@ -252,6 +229,32 @@ class Volume
         void release()
         {
             hashTable.Free();
+        }
+
+        int getHashSize() const
+        {
+            return hashTable.num_entries_;
+        }
+
+        void saveHash(tsdfvh::HashEntry *cpudata) const
+        {
+            cudaMemcpy(cpudata,
+                       (void *)hashTable.entries_,
+                       hashTable.num_entries_*sizeof(tsdfvh::HashEntry),
+                       cudaMemcpyDeviceToHost);
+        }
+
+        int getHeapSize() const
+        {
+            return hashTable.heap_size_;
+        }
+
+        void saveHeap(uint *cpudata) const
+        {
+            cudaMemcpy(cpudata,
+                       hashTable.heap_.heap_,
+                       hashTable.heap_size_*sizeof(uint),
+                       cudaMemcpyDeviceToHost);
         }
 };
 

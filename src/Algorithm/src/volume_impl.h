@@ -3,6 +3,8 @@
 
 #include"tsdfvh/voxel.h"
 
+#ifdef __CUDACC__
+
 __forceinline__ __device__
 int Volume::getVoxelInterp(const float3 &pos,
                                      int &blockIdx,
@@ -246,6 +248,7 @@ float3 Volume::grad(const float3 & pos) const
             * make_float3(voxelSize.x, voxelSize.y, voxelSize.z)
             * (0.5f * 0.00003051944088f);
 }
+#endif// __CUDACC__
 
 
 #endif

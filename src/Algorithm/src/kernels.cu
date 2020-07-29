@@ -243,7 +243,6 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
 
     if(pix.x>=vol.getResolution().x || pix.y>=vol.getResolution().y)
     {
-        //printf("pixel out of bound.\n");
         return;
     }
 
@@ -281,13 +280,12 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
 
             if(blockIdx<0)
             {
-                printf("block not found.\n");
                 continue;
             }
 
             p_data.x=v->getTsdf();
             p_data.y=v->getWeight();
-            float3 p_color = v->color;
+            float3 p_color = v->getColor();
 
 
             //float w=fmin(p_data.y,maxweight);
@@ -315,10 +313,9 @@ __global__ void integrateKernel(Volume vol, const Image<float> depth,
 
             v->setTsdf(p_data.x);
             v->setWeight(p_data.y);
-            v->color=fcol;
+            v->setColor(fcol);
 
             __threadfence();
-            //printf("v:%f %f %f %f\n",p_data.x,p_data.y,p_data_n.x,p_data_n.y);
         }
     }
 }
@@ -1303,7 +1300,6 @@ __global__ void point2PointCovFirstTerm(const float3 *vert,
     {
         for(int i=0;i<36;i++)
             ret.data[i]=cov_big;
-//         printf("ASDFGSDFHSFHSDFH2\n");
         outData[idx]=ret;
         return;
     }
