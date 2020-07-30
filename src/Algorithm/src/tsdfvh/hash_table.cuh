@@ -97,8 +97,8 @@ bool HashTable::DeleteBlock(const int3 &position)
 #ifdef __CUDACC__
     int start_idx = Hash(position);
     volatile HashEntry *start_entry=&entries_[start_idx];
-    int start_ptr;
-    int mutex;
+    int start_ptr=kLockEntry-1;
+    int mutex=-10;
 
     //lock the start position of the linked list
     do
@@ -108,8 +108,13 @@ bool HashTable::DeleteBlock(const int3 &position)
         {
             return false;
         }
+        else if(start_ptr==kLockEntry)
+        {
+            continue;
+        }
         mutex = atomicCAS( (int*) &start_entry->next_ptr, start_ptr, kLockEntry);
     }while(mutex != start_ptr);
+
 
     //only one entry on the list
     if(start_ptr==kTailEntry)
@@ -146,7 +151,8 @@ bool HashTable::DeleteBlock(const int3 &position)
             start_entry->position.y==position.y &&
             start_entry->position.z==position.z)
     {
-        int idx=start_entry->next_ptr;
+
+        int idx=start_ptr;
         volatile HashEntry *prev_entry=start_entry;
         volatile HashEntry *entry=&entries_[idx];
         while(entry->next_ptr!=kTailEntry)
@@ -183,7 +189,8 @@ bool HashTable::DeleteBlock(const int3 &position)
     }
     else //Some other entry has to be removed
     {
-        int idx=start_entry->next_ptr;
+
+        int idx=start_ptr;
         volatile HashEntry *prev_entry=start_entry;
         volatile HashEntry *entry=&entries_[idx];
         bool found=false;
@@ -224,8 +231,9 @@ bool HashTable::DeleteBlock(const int3 &position)
          __threadfence();
         return true;
     }
-#endif
+#else
     return false;
+#endif
 }
 
 __device__ inline
@@ -241,7 +249,7 @@ int HashTable::FindHashEntry(int3 position) const
         }
 
         idx=entries_[idx].next_ptr;
-    } while(idx>=0 );
+    } while(idx>=0);
 
     return -1;
 }

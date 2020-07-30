@@ -16,7 +16,6 @@ class Voxel
     public:
         short sdf;
         short weight;
-//        short3 color;
 #ifdef __CUDACC__
         __half r;
         __half g;

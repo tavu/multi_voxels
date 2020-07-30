@@ -215,6 +215,8 @@ class Volume
             }
 
             block_idx=hashTable.AllocateBlock(block_position);
+
+
             if(block_idx>=0)
                 return &hashTable.GetVoxel(block_idx,local_voxel);
             return nullptr;

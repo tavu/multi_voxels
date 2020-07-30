@@ -86,9 +86,6 @@ __global__ void initVoxelsKernel(voxel_t *voxels, int size )
     int idx = blockIdx.x*blockDim.x + threadIdx.x;
     if(idx<size)
     {
-//        voxels[idx].color.x=0;
-//        voxels[idx].color.y=0;
-//        voxels[idx].color.z=0;
 
         voxels[idx].setColor(make_float3(0.0,0.0,0.0));
         voxels[idx].setWeight(0.0);
