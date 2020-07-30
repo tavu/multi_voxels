@@ -21,7 +21,6 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     lastFrame(0),
     volume(par),
     keyFrameVol(par)
-    //fusionVol(par)
 {
     std::cout<<"Init kfusion"<<std::endl;
 
@@ -47,7 +46,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     inverseCam=getInverseCameraMatrix(params.camera);
     camMatrix=getCameraMatrix(params.camera);
     step = min(params.volume_size) / max(params.volume_resolution);
-    viewPose = &pose;
+//    viewPose = &pose;
 
     uint2 cs = make_uint2(params.computationSize.x, params.computationSize.y);
 
@@ -200,12 +199,6 @@ void KFusion::dropKeyFrame(int val)
     }
 }
 
-void KFusion::reset()
-{
-//    dim3 grid = divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
-//    initVolumeKernel<<<grid, imageBlock>>>(volume, make_float2(1.0f, 0.0f));
-}
-
 bool KFusion::preprocessing(const float *inputDepth,const uchar3 *inputRgb)
 {
     cudaMemcpy(rawDepth.data(), inputDepth, params.inputSize.x * params.inputSize.y * sizeof(float),cudaMemcpyHostToDevice);
@@ -266,13 +259,12 @@ bool KFusion::tracking(uint frame)
 
     oldPose = pose;
     const sMatrix4 projectReference = camMatrix*inverse(sMatrix4(&raycastPose));
-
+    sMatrix4 deltaPose;
     for (int level = iterations.size() - 1; level >= 0; --level)
     {
         for (int i = 0; i < iterations[level]; ++i)
         {
             TICK("track");
-            trackPose=pose;
             trackKernel<<<grids[level], imageBlock>>>( reduction,
                                                        inputVertex[level],
                                                        inputNormal[level],
@@ -292,7 +284,7 @@ bool KFusion::tracking(uint frame)
             for(int j = 1; j < 8; ++j)
                 values[0] += values[j];
 
-            if (updatePoseKernel(pose, output.data(), params.icp_threshold,this->deltaPose))
+            if (updatePoseKernel(pose, output.data(), params.icp_threshold,deltaPose))
                 break;
         }
     }
@@ -396,24 +388,6 @@ void KFusion::clearKeyFramesData()
     }
     volumes.clear();
 }
-
-//void KFusion::saveVolumes(char *dir)
-//{
-//    char filename[512];
-    
-//    Volume volTmp(params);
-    
-//    for(int i=0;i<volumes.size();i++)
-//    {
-//        VolumeCpu &v=volumes[i];
-//        volTmp.initDataFromCpu(v);
-        
-//        sprintf(filename,"%s/f%d_voxels",dir,v.frame);
-        
-//        saveVoxelsToFile(filename,volTmp);
-//    }
-//    volTmp.release();
-//}
 
 bool KFusion::raycasting(uint frame)
 {
@@ -618,22 +592,12 @@ bool KFusion::checkPoseKernel(sMatrix4 & pose,
         return false;
     }
 
-    _tracked=true;
-    //poseInv=inverse(pose);
+    _tracked=true;   
     return true;
 }
 
 void KFusion::getVolumeData(short2 *cpu_data)
 {
-//    int size=volume.getResolution().x*volume.getResolution().y*volume.getResolution().z*sizeof(short2);
-//    short2 *gpu_data;
-//    cudaMalloc(&gpu_data, size);
-
-//    dim3 grid=divup(dim3(volume.getResolution().x, volume.getResolution().y), imageBlock);
-//    getVoxelData<<<grid, imageBlock>>>(volume,gpu_data);
-
-//    cudaMemcpy(cpu_data, gpu_data,size, cudaMemcpyDeviceToHost);
-//    cudaFree(gpu_data);
     getVolumeData(cpu_data,volume);
 }
 

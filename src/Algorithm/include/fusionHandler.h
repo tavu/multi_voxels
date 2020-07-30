@@ -6,12 +6,13 @@
 // #include<vector>
 #include"utils.h"
 
+
+class KFusion;
 /**
 * @brief      Class handling KFusion.
 *             The implementation of KFusion is in cuda.
 *             FusionHandler use solely cpp syntax separating cpp and cuda.
 */
-class KFusion;
 class FusionHandler
 {
     public:
@@ -21,6 +22,9 @@ class FusionHandler
         * @param[in]  p The input parameters.
         */
         FusionHandler(const kparams_t &p, sMatrix4 initPose);
+        /**
+        * @brief    Destructor
+        */
         ~FusionHandler();
 
         /**
@@ -53,7 +57,6 @@ class FusionHandler
         /**
         * @brief      Removes the key frame of the given idx and frees its data
         * @param[in]  The id of the key frame
-        * @return     Returns the number of the key frames.
         */
         void dropKeyFrame(int val);
 
@@ -62,14 +65,12 @@ class FusionHandler
         *             This poses are used for fusion
         *
         * @param[in]  idx The id of the key frame.
-        * @return     p the pose of the key frame in the world
         */
         void setKeyFramePose(int idx, const sMatrix4 &p);
 
         /**
-        * @brief      Gets the position of the last(current) key frame.
-        *
-        * @return     the position of the last(current) key frame.
+        * @brief      Gets the position of the last key frame.
+        * @return     the position of the last key frame.
         */
         sMatrix4 getLastKFPose() const;
 
@@ -86,7 +87,7 @@ class FusionHandler
         *             After this funcion you may want to call fuseLastKeyFrame
         *
         * @param[in]  The id of the requested key frame.
-        * @return     true on success false otherwise.
+        * @return     True on success False otherwise.
         */
         bool fuseVolumes();
 
@@ -139,7 +140,6 @@ class FusionHandler
 
         /**
         * @brief      Get the id of the last key frame (current key frame)
-        *
         * @return    the id of the last key frame (current key frame).
         */
         int getLastKeyFrameIdx() const;
