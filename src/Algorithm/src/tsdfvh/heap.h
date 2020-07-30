@@ -59,16 +59,27 @@ class Heap
         /** Vector of the indices currently assigned */
         unsigned int *heap_;
 
+
+
+        /**
+        * @brief      Function that sets the heap counter.
+        *
+        * @param[in]  The new counter.
+        *
+        * @return     Returns the number
+        */
         __device__ void setCounter(uint n)
         {
                 *heap_counter_=n;
         }
 
+        /** Index of the element of heap_ that contains the next available index */
         __device__ uint getCounter() const
         {
                 return *heap_counter_;
         }
 
+        /** Index of the element of heap_ that contains the next available index */
         volatile uint *heap_counter_;
 };
 

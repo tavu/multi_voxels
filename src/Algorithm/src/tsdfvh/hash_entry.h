@@ -3,16 +3,17 @@
 
 #include "cuda_runtime.h"
 
-#define kFreeEntry -1
-#define kLockEntry -2
-#define kTailEntry -3
+
+#define kFreeEntry -1 //free block
+#define kLockEntry -2 //block locked from other thread
+#define kTailEntry -3 //This block is valid and also a tail in the linked list
 
 namespace tsdfvh
 {
 
 /**
  * @brief      Struct that represents a hash entry
- *             Hash entries form a linked.
+ *             Hash entries form a linked list.
  */
 
 class HashEntry
@@ -28,34 +29,6 @@ class HashEntry
          * If next_ptr is kLockEntry this entry is edited by another thread.
          */
         int next_ptr = kFreeEntry;
-
-//        __device__ inline bool isEmpty() const
-//        {
-//            return next_ptr==kFreeEntry;
-//        }
-
-//        __device__ inline bool isValid() const
-//        {
-//            return next_ptr>0 || next_ptr == kTailEntry;
-//        }
-
-//        __device__ inline bool isLocked() const
-//        {
-//            return next_ptr==kLockEntry;
-//        }
-
-//        __device__ inline bool isTail() const
-//        {
-//            return next_ptr==kTailEntry;
-//        }
-
-//        __device__ inline bool isEqual(const int3 &pos) const
-//        {
-//            return isValid() &&
-//                   position.x==pos.x &&
-//                   position.y==pos.y &&
-//                   position.z==pos.z;
-//        }
 };
 
 __device__ inline

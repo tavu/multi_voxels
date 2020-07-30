@@ -9,16 +9,11 @@
 namespace tsdfvh 
 {
 
-__host__ __device__ inline
-int HashTable::GetNumEntries() {
-    return num_entries_;
-}
-
-//__device__ inline
-//HashEntry HashTable::GetHashEntry(int i)
-//{
-//    return entries_[i];
+//__host__ __device__ inline
+//int HashTable::GetNumEntries() {
+//    return num_entries_;
 //}
+
 
 __device__
 inline voxel_t& HashTable::GetVoxel(int entry_idx, int3 vpos) const
@@ -103,7 +98,7 @@ int HashTable::AllocateBlock(const int3 &position)
 
 //TODO
 __device__ inline
-int HashTable::DeleteBlock(const int3 &position)
+bool HashTable::DeleteBlock(const int3 &position)
 {
     return -1;
 }

@@ -38,13 +38,12 @@ class HashTable
         */
         void setEmpty();
         /**
-        * @brief      Allocates a voxel block.
+        * @brief      Allocates a voxel block only if it does not exist.
         *
         * @param[in]  position  The 3D position of the voxel block
         *
-        * @return     1 if the block was successfully allocated, 0 if the voxel block
-        *             in that position was already allocated, -1 if the voxel block
-        *             cannot be allocated (bucket full).
+        * @return     The index of the newly allocated block or the index of the existing block with the same position.
+        *
         */
         __device__ int AllocateBlock(const int3 &position);
 
@@ -56,41 +55,27 @@ class HashTable
         * @return     True if the block was successfully deleted. False if the block
         *             was not found.
         */
-        __device__ int DeleteBlock(const int3 &position);
+        __device__ bool DeleteBlock(const int3 &position);
 
         /**
-        * @brief      Returns the hash entry corresponding to a given position.
+        * @brief      Returns the index of the corresponding block to a given position.
         *
         * @param[in]  position  The 3D position of the entry
         *
-        * @return     The hash entry corresponding to the position.
+        * @return     The idx of the corresponding block or -1 if the block is not found.
         */
         __device__ __forceinline__
-        int FindHashEntry(int3 position) const;
+        int FindHashEntry(int3 position) const;      
 
         /**
-        * @brief      Returns the number of allocated blocks.
+        * @brief      Returns the voxel of the given block and position
         *
-        * @return     The number of allocated blocks.
+        * @param[in]  entry_idx  The index of the corresponding block of the voxel.
+        *
+        * @param[in]  vpos  The position of the voxel in the block.
+        *
+        * @return     The requested voxel.
         */
-        __forceinline__ int GetNumAllocatedBlocks();
-
-        /**
-        * @brief      Gets the number of entries.
-        *
-        * @return     The number of entries.
-        */
-        __host__ __device__ __forceinline__ int GetNumEntries();
-
-        /**
-        * @brief      Gets the hash entry at the given index.
-        *
-        * @param[in]  i     The index of the hash entry
-        *
-        * @return     The hash entry.
-        */
-//        __device__ __forceinline__ HashEntry GetHashEntry(int i);
-
         __device__
         inline voxel_t& GetVoxel(int entry_idx, int3 vpos) const;
 
@@ -126,9 +111,6 @@ class HashTable
 
         /** Size in voxels of the side of a voxel block */
         int block_size_;
-
-//        /** Number of blocks currently allocated */
-//        int num_allocated_blocks_;
 };
 
 }  // namespace tsdfvh
