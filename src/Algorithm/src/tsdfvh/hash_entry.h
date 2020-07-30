@@ -13,7 +13,8 @@ namespace tsdfvh
 
 /**
  * @brief      Struct that represents a hash entry
- *             Hash entries form a linked list.
+ *             Hash entries are blocks of size block_size*block_size*block_size and also
+ *             form a linked list.
  */
 
 class HashEntry
@@ -31,6 +32,12 @@ class HashEntry
         int next_ptr = kFreeEntry;
 };
 
+/**
+* @brief
+* @param[in]  entry  The corresponding hash entry.
+* @param[in]  position The position of the block.*
+* @return     True if entry is valid and points to the given position
+*/
 __device__ inline
 bool isEqual(volatile HashEntry &entry, const int3 &position)
 {
@@ -40,18 +47,34 @@ bool isEqual(volatile HashEntry &entry, const int3 &position)
             entry.position.z==position.z;
 }
 
+/**
+* @brief
+* @param[in]  entry  The corresponding hash entry.
+* @return     True if this entry is a tail on the linked list
+*/
 __device__ inline
 bool isTail(volatile HashEntry &entry)
 {
     return entry.next_ptr==kTailEntry;
 }
 
+/**
+* @brief
+* @param[in]  entry  The corresponding hash entry.
+* @return     True if this entry is locked
+*/
 __device__ inline
 bool isLocked(volatile HashEntry &entry)
 {
     return entry.next_ptr==kLockEntry;
 }
 
+
+/**
+* @brief
+* @param[in]  entry  The corresponding hash entry.
+* @return     True if this entry is empty
+*/
 __device__ inline
 bool isEmpty(volatile HashEntry &entry)
 {
