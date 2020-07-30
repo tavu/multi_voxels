@@ -300,6 +300,13 @@ class KFusion
         {
             return lastKeyFrameIdx;
         }
+
+        /**
+        * @brief     Calculates the covariance of ICP.
+        * @return    the covariance matrix.
+        */
+        sMatrix6 calculate_ICP_COV();
+
     private:
         /** The sequence number of the current frame **/
         int _frame;
@@ -391,5 +398,6 @@ class KFusion
                              const float * output,
                              uint2 imageSize,
                              float track_threshold);
+
 };
 #endif
