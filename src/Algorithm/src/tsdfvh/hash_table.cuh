@@ -94,7 +94,138 @@ int HashTable::AllocateBlock(const int3 &position)
 __device__ inline
 bool HashTable::DeleteBlock(const int3 &position)
 {
-    return -1;
+#ifdef __CUDACC__
+    int start_idx = Hash(position);
+    volatile HashEntry *start_entry=&entries_[start_idx];
+    int start_ptr;
+    int mutex;
+
+    //lock the start position of the linked list
+    do
+    {
+        start_ptr=start_entry->next_ptr;
+        if(start_ptr==kFreeEntry)
+        {
+            return false;
+        }
+        mutex = atomicCAS( (int*) &start_entry->next_ptr, start_ptr, kLockEntry);
+    }while(mutex != start_ptr);
+
+    //only one entry on the list
+    if(start_ptr==kTailEntry)
+    {
+        if(start_entry->position.x==position.x &&
+           start_entry->position.y==position.y &&
+           start_entry->position.z==position.z)
+        {
+            start_entry->position.x=0;
+            start_entry->position.y=0;
+            start_entry->position.z=0;
+
+            for(int i=0;i<block_size_*block_size_*block_size_;i++)
+            {
+                voxels_[start_idx+i].setTsdf(1.0);
+                voxels_[start_idx+i].setWeight(0.0);
+                voxels_[start_idx+i].setColor(make_float3(0.0, 0.0, 0.0));
+            }
+            __threadfence();
+            start_entry->next_ptr = kFreeEntry;
+            __threadfence();
+            return true;
+        }
+        else
+        {
+            start_entry->next_ptr = start_ptr;
+            __threadfence();
+            return false;
+        }
+    }
+    //The first entry has to be removed.
+    //Replace it with tail
+    else if(start_entry->position.x==position.x &&
+            start_entry->position.y==position.y &&
+            start_entry->position.z==position.z)
+    {
+        int idx=start_entry->next_ptr;
+        volatile HashEntry *prev_entry=start_entry;
+        volatile HashEntry *entry=&entries_[idx];
+        while(entry->next_ptr!=kTailEntry)
+        {
+            prev_entry=entry;
+            idx=entry->next_ptr;
+            entry=&entries_[idx];
+        }
+
+        prev_entry->next_ptr=kTailEntry;
+
+        start_entry->position.x=entry->position.x;
+        start_entry->position.y=entry->position.y;
+        start_entry->position.z=entry->position.z;
+
+        for(int i=0;i<block_size_*block_size_*block_size_;i++)
+        {
+            voxels_[start_idx+i].sdf=voxels_[idx+i].sdf;
+            voxels_[start_idx+i].weight=voxels_[idx+i].weight;
+            voxels_[start_idx+i].r=voxels_[idx+i].r;
+            voxels_[start_idx+i].g=voxels_[idx+i].g;
+            voxels_[start_idx+i].b=voxels_[idx+i].b;
+
+            voxels_[idx+i].setTsdf(1.0);
+            voxels_[idx+i].setWeight(0.0);
+            voxels_[idx+i].setColor(make_float3(0.0, 0.0, 0.0));
+        }
+
+        __threadfence();
+        start_entry->next_ptr = start_ptr;
+        __threadfence();
+        return true;
+
+    }
+    else //Some other entry has to be removed
+    {
+        int idx=start_entry->next_ptr;
+        volatile HashEntry *prev_entry=start_entry;
+        volatile HashEntry *entry=&entries_[idx];
+        bool found=false;
+        while(entry->next_ptr!=kTailEntry )
+        {
+            if(entry->position.x==position.x &&
+               entry->position.y==position.y &&
+               entry->position.z==position.z)
+            {
+                found=true;
+                break;
+            }
+            prev_entry=entry;
+            idx=entry->next_ptr;
+            entry=&entries_[idx];
+        }
+        if(!found)
+        {
+            start_entry->next_ptr = start_ptr;
+            __threadfence();
+            return false;
+        }
+
+        prev_entry->next_ptr=entry->next_ptr;
+        entry->position.x=0;
+        entry->position.y=0;
+        entry->position.z=0;
+        entry->next_ptr = kFreeEntry;
+
+        for(int i=0;i<block_size_*block_size_*block_size_;i++)
+        {
+            voxels_[idx+i].setTsdf(1.0);
+            voxels_[idx+i].setWeight(0.0);
+            voxels_[idx+i].setColor(make_float3(0.0, 0.0, 0.0));
+        }
+        __threadfence();
+         start_entry->next_ptr = start_ptr;
+         __threadfence();
+        return true;
+    }
+#endif
+    return false;
 }
 
 __device__ inline
