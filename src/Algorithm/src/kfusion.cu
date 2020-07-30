@@ -48,7 +48,7 @@ KFusion::KFusion(const kparams_t &par, sMatrix4 initPose)
     step = min(params.volume_size) / max(params.volume_resolution);
 //    viewPose = &pose;
 
-    uint2 cs = make_uint2(params.computationSize.x, params.computationSize.y);
+    uint2 cs = make_uint2(params.inputSize.x, params.inputSize.y);
 
     std::cout<<"CAM"<<std::endl;
     std::cout<<camMatrix<<std::endl;
@@ -221,7 +221,7 @@ bool KFusion::preprocessing(const ushort * inputDepth,const uchar3 *inputRgb)
     cudaMemcpy(rawRgb.data(), inputRgb, params.inputSize.x * params.inputSize.y * sizeof(uchar3),cudaMemcpyHostToDevice);
 
     // filter the input depth map
-    dim3 grid = divup(make_uint2(params.computationSize.x, params.computationSize.y), imageBlock);
+    dim3 grid = divup(make_uint2(params.inputSize.x, params.inputSize.y), imageBlock);
     TICK("bilateral_filter");
     bilateralFilterKernel<<<grid, imageBlock>>>(scaledDepth[0], rawDepth, gaussian, e_delta, radius);
     TOCK();        
@@ -235,7 +235,7 @@ bool KFusion::tracking(uint frame)
     forcePose=false;
     std::vector<dim3> grids;
     for (int i = 0; i < iterations.size(); ++i)
-        grids.push_back(divup(make_uint2(params.computationSize.x, params.computationSize.y) >> i, imageBlock));
+        grids.push_back(divup(make_uint2(params.inputSize.x, params.inputSize.y) >> i, imageBlock));
 
     // half sample the input depth maps into the pyramid levels
     for (int i = 1; i < iterations.size(); ++i)
@@ -289,7 +289,7 @@ bool KFusion::tracking(uint frame)
         }
     }
 
-    return checkPoseKernel(pose, oldPose, output.data(), params.computationSize,track_threshold);
+    return checkPoseKernel(pose, oldPose, output.data(), params.inputSize,track_threshold);
 }
 
 bool KFusion::initKeyFrame(uint frame)
@@ -395,7 +395,7 @@ bool KFusion::raycasting(uint frame)
     {
 //         oldRaycastPose = raycastPose;
         raycastPose = pose;
-        dim3 grid=divup(make_uint2(params.computationSize.x,params.computationSize.y),raycastBlock );
+        dim3 grid=divup(make_uint2(params.inputSize.x,params.inputSize.y),raycastBlock );
         TICK("raycast");
         raycastKernel<<<grid, raycastBlock>>>(vertex, normal, volume, sMatrix4(&raycastPose) * inverseCam,
                                               nearPlane,
@@ -431,7 +431,7 @@ void KFusion::integrateKeyFrameData()
 
 bool KFusion::integration(uint frame)
 {
-    //bool doIntegrate = checkPoseKernel(pose, oldPose, output.data(),params.computationSize, track_threshold);
+    //bool doIntegrate = checkPoseKernel(pose, oldPose, output.data(),params.inputSize, track_threshold);
     if (_tracked || _frame <= 3)
     {
         printCUDAError();
@@ -497,7 +497,7 @@ void KFusion::renderImage(uchar3 * out)
     TOCK();
 
     cudaMemcpy(out, renderModel.data(),
-                params.computationSize.x * params.computationSize.y * sizeof(uchar3),
+                params.inputSize.x * params.inputSize.y * sizeof(uchar3),
                 cudaMemcpyDeviceToHost);
 
 }

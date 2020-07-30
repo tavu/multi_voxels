@@ -7,42 +7,55 @@
 
 typedef struct
 {
-    int compute_size_ratio=1;
-    int integration_rate=1;
-    int rendering_rate = 1;
-    int tracking_rate=1;
-
-    float optim_thr=1e7;
-    float cov_small=1e-4;
-    float cov_big=1e-2;
-
+    /** The resolution of the volume */
     uint3 volume_resolution = make_uint3(256,256,256);
-    //uint3 volume_resolution = make_uint3(512,512,512);
+
+    /** The starting position of the camrea.
+     *  Usualy the center of the volume
+     */
     float3 volume_direction = make_float3(4.0,4.0,4.0);
+
+    /** The size of the volume in meters. */
     float3 volume_size = make_float3(8,8,8);
 
-    //depth sensors noise covariance
-    float cov_z=0.02;
 
-
+    /** Pyramids for ICP. */
     std::vector<int> pyramid = {10,5,4};
-    float mu = 0.1;
-    float icp_threshold = 5.0e-01;
-    //float icp_threshold = 1e-5;
 
+    /** mu parameter for integration */
+    float mu = 0.1;
+
+    /** ICP error threashold */
+    float icp_threshold = 5.0e-01;    
+
+    /** Resolution of the input images */
     uint2 inputSize;
-    uint2 computationSize;
+
+    /** Camera matrix */
     float4 camera;
 
-    //float rfitness=0.55;
-    float rfitness=0.6;
-    float rerror=1e5;
-
-    //for hashing
+    ///Parameters for hashing
+    /** Number of buckets */
     int num_buckets = 5000;
-    //int num_buckets = 256*256*256/(8*8*8);
+    /** Number of extra space on hash table
+     * num_entries_=num_buckets*bucket_size;
+    */
     int bucket_size = 2;
+
+    /** Block size of hash entry assuming cubical
+     * e.g. block_size*block_size*block_size
+     */
     int block_size = 8;
+
+
+    ///Parameters for covariance
+    /** The noise of depth sensor. */
+    float cov_z=0.02;
+
+    /** A small covariance value. */
+    float cov_small=1e-4;
+    /** A big covariance value. */
+    float cov_big=1e-2;
 
 } kparams_t;
 

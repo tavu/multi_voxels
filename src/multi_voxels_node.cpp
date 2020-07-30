@@ -173,9 +173,9 @@ void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
     params.inputSize.y=msg->height;
     params.inputSize.x=msg->width;
     
-    params.computationSize = make_uint2(
-                params.inputSize.x / params.compute_size_ratio,
-                params.inputSize.y / params.compute_size_ratio);
+//    params.computationSize = make_uint2(
+//                params.inputSize.x / params.compute_size_ratio,
+//                params.inputSize.y / params.compute_size_ratio);
 
     
     ROS_INFO("camera is = %f, %f, %f, %f",
@@ -194,7 +194,7 @@ void camInfoCallback(sensor_msgs::CameraInfoConstPtr msg)
     inputDepthFl=new float[params.inputSize.x * params.inputSize.y];
     
     if(publish_volume)    
-        volumeRender = new uchar3[params.computationSize.x * params.computationSize.y];    
+        volumeRender = new uchar3[params.inputSize.x * params.inputSize.y];
     else
         volumeRender=nullptr;
     fusion=new FusionHandler(params,poseMatrix);
@@ -320,7 +320,7 @@ void publishVolumeProjection()
     image.encoding=std::string("rgb8");
 
     uchar *ptr=(uchar*)volumeRender;
-    image.data=std::vector<uchar>(ptr ,ptr+(params.computationSize.x * params.computationSize.y*step_size) );
+    image.data=std::vector<uchar>(ptr ,ptr+(params.inputSize.x * params.inputSize.y*step_size) );
     volume_pub.publish(image);
 }
 
