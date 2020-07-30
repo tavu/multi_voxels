@@ -49,52 +49,6 @@ __global__ void renderTrackKernel(Image<uchar3> out,const Image<TrackData> data)
     }
 }
 
-__global__ void renderVolumeKernel(Image<uchar3> render,
-                                   Image<float3> vertex,
-                                   Image<float3> normal,
-                                   const float3 light,
-                                   const float3 ambient)
-{
-    const uint2 pos = thr2pos2();
-    if(normal[pos].x != INVALID)
-    {
-        const float3 surfNorm = normal[pos];
-        const float3 diff = normalize(light - vertex[pos]);
-        const float dir = fmaxf( dot(normalize(surfNorm), diff), 0.f);
-        const float3 col = clamp(make_float3(dir) + ambient, 0.f, 1.f)* 255;
-        render.el() = make_uchar3(col.x, col.y, col.z);
-    }
-    else
-    {
-         render.el() = make_uchar3(0, 0, 0);
-    }
-}
-
-__global__ void renderVolumeKernelGray(Image<uchar3> render,
-                                   Image<float3> vertex,
-                                   Image<float3> normal,
-                                   const float3 light,
-                                   const float3 ambient,
-                                   const float nearPlane,
-                                   const float farPlane)
-
-{
-    const uint2 pos = thr2pos2();
-    if(normal[pos].x != INVALID)
-    {
-        const float3 surfNorm = normal[pos];
-        const float3 diff =  vertex[pos];
-        const float dir = fmaxf( dot(normalize(surfNorm), diff), 0.f);
-
-        const float d = (clamp(dir, nearPlane, farPlane) - nearPlane) / (farPlane - nearPlane);
-        render.el() = make_uchar3(d * 255, d * 255, d * 255);
-    }
-    else
-    {
-         render.el() = make_uchar3(0, 0, 0);
-    }
-}
-
 __global__ void vertex2depthKernel(Image<float> render,
                                    Image<float3> vertex,
                                    const sMatrix4 K)
@@ -468,7 +422,7 @@ __global__ void halfSampleRobustImageKernel(Image<float> out,
             float current = in[make_uint2(
                                 clamp(make_int2(centerPixel.x + j, centerPixel.y + i),
                                       make_int2(0),
-                                      make_int2(in.size.x - 1, in.size.y - 1)))]; // TODO simplify this!
+                                      make_int2(in.size.x - 1, in.size.y - 1)))];
             if (fabsf(current - center) < e_d)
             {
                 sum += 1.0f;

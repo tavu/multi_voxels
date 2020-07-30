@@ -9,12 +9,6 @@
 namespace tsdfvh 
 {
 
-//__host__ __device__ inline
-//int HashTable::GetNumEntries() {
-//    return num_entries_;
-//}
-
-
 __device__
 inline voxel_t& HashTable::GetVoxel(int entry_idx, int3 vpos) const
 {
