@@ -168,6 +168,10 @@ bool HashTable::DeleteBlock(const int3 &position)
         start_entry->position.y=entry->position.y;
         start_entry->position.z=entry->position.z;
 
+        entry->position.x=0;
+        entry->position.z=0;
+        entry->position.y=0;
+
         for(int i=0;i<block_size_*block_size_*block_size_;i++)
         {
             voxels_[start_idx+i].sdf=voxels_[idx+i].sdf;
@@ -181,9 +185,12 @@ bool HashTable::DeleteBlock(const int3 &position)
             voxels_[idx+i].setColor(make_float3(0.0, 0.0, 0.0));
         }
 
+        entry->next_ptr = kFreeEntry;
         __threadfence();
         start_entry->next_ptr = start_ptr;
         __threadfence();
+        heap_.Append(idx);
+
         return true;
 
     }
@@ -229,6 +236,7 @@ bool HashTable::DeleteBlock(const int3 &position)
         __threadfence();
          start_entry->next_ptr = start_ptr;
          __threadfence();
+        heap_.Append(idx);
         return true;
     }
 #else
